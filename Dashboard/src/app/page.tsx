@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { logoutAction } from "@/lib/auth-actions";
 
 export default function Home() {
   return (
@@ -20,11 +21,11 @@ export default function Home() {
         </p>
 
         <div className="flex flex-col gap-4 sm:flex-row">
-          <Link href="/login">
-            <Button size="lg" className="w-full sm:w-auto">
+          <form action={logoutAction}>
+            <Button type="submit" size="lg" className="w-full sm:w-auto">
               لوحة التحكم (للأطباء)
             </Button>
-          </Link>
+          </form>
         </div>
       </main>
     </div>
