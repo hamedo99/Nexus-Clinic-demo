@@ -162,62 +162,69 @@ export async function validateAndCreateBooking(data: {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Parallelize independent validations for maximum throughput
-    const [statusResult, config, capacityCount, blocked, conflict, duplicate] = await Promise.all([
-        // 0. Subscription Check
-        doctorId
-            ? prisma.doctor.findUnique({ where: { id: doctorId }, select: { subscriptionStatus: true } })
-            : prisma.doctor.findFirst({ select: { subscriptionStatus: true } }),
+    let validationResults;
+    try {
+        validationResults = await Promise.all([
+            // 0. Subscription Check
+            doctorId
+                ? prisma.doctor.findUnique({ where: { id: doctorId }, select: { subscriptionStatus: true } })
+                : prisma.doctor.findFirst({ select: { subscriptionStatus: true } }),
 
-        // 1. Config Fetch
-        fetchBookingConfig(),
+            // 1. Config Fetch
+            fetchBookingConfig(),
 
-        // 2. Capacity Check logic (pre-computation)
-        (async () => {
-            const hourStart = new Date(startTime);
-            hourStart.setMinutes(0, 0, 0);
-            const hourEnd = new Date(hourStart);
-            hourEnd.setHours(hourStart.getHours() + 1);
-            return prisma.appointment.count({
+            // 2. Capacity Check logic (pre-computation)
+            (async () => {
+                const hourStart = new Date(startTime);
+                hourStart.setMinutes(0, 0, 0);
+                const hourEnd = new Date(hourStart);
+                hourEnd.setHours(hourStart.getHours() + 1);
+                return prisma.appointment.count({
+                    where: {
+                        status: { not: "CANCELLED" },
+                        ...(doctorId ? { doctorId } : {}),
+                        startTime: { gte: hourStart, lt: hourEnd }
+                    }
+                });
+            })(),
+
+            // 3. Blocked Time Check
+            prisma.blockedTime.findFirst({
+                where: {
+                    ...(doctorId ? { doctorId } : {}),
+                    startTime: { lte: startTime },
+                    endTime: { gte: new Date(startTime.getTime() + 20 * 60000) } // Approximation based on default 20min
+                }
+            }),
+
+            // 4. Conflicting Appointment
+            prisma.appointment.findFirst({
                 where: {
                     status: { not: "CANCELLED" },
                     ...(doctorId ? { doctorId } : {}),
-                    startTime: { gte: hourStart, lt: hourEnd }
+                    AND: [
+                        { startTime: { lt: new Date(startTime.getTime() + 20 * 60000) } },
+                        { endTime: { gt: startTime } }
+                    ]
                 }
-            });
-        })(),
+            }),
 
-        // 3. Blocked Time Check
-        prisma.blockedTime.findFirst({
-            where: {
-                ...(doctorId ? { doctorId } : {}),
-                startTime: { lte: startTime },
-                endTime: { gte: new Date(startTime.getTime() + 20 * 60000) } // Approximation based on default 20min
-            }
-        }),
+            // 5. Duplicate Prevention
+            prisma.appointment.findFirst({
+                where: {
+                    patient: { phoneNumber: patientPhone },
+                    ...(doctorId ? { doctorId } : {}),
+                    status: { not: "CANCELLED" },
+                    startTime: { gte: today }
+                }
+            })
+        ]);
+    } catch (dbError) {
+        console.error("Database connection or validation fetch failed:", dbError);
+        return { success: false, message: "فشل الاتصال بقاعدة البيانات. يرجى التأكد من استقرار الخادم." };
+    }
 
-        // 4. Conflicting Appointment
-        prisma.appointment.findFirst({
-            where: {
-                status: { not: "CANCELLED" },
-                ...(doctorId ? { doctorId } : {}),
-                AND: [
-                    { startTime: { lt: new Date(startTime.getTime() + 20 * 60000) } },
-                    { endTime: { gt: startTime } }
-                ]
-            }
-        }),
-
-        // 5. Duplicate Prevention
-        prisma.appointment.findFirst({
-            where: {
-                patient: { phoneNumber: patientPhone },
-                ...(doctorId ? { doctorId } : {}),
-                status: { not: "CANCELLED" },
-                startTime: { gte: today }
-            }
-        })
-    ]);
+    const [statusResult, config, capacityCount, blocked, conflict, duplicate] = validationResults;
 
     const subscriptionStatus = statusResult?.subscriptionStatus || "ACTIVE";
     if (subscriptionStatus === "EXPIRED" || subscriptionStatus === "DISABLED") {

@@ -1,11 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || process.env.EXPO_PUBLIC_SUPABASE_KEY || "";
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const oldFileUrl = formData.get('oldFileUrl') as string;
+
+    // Optional cleanup of old file
+    if (oldFileUrl && oldFileUrl.includes('nexus_uploads')) {
+      try {
+        const urlParts = oldFileUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        if (fileName) {
+          const { error: deleteError } = await supabase.storage
+            .from('nexus_uploads')
+            .remove([`doctors_profiles/${fileName}`]);
+
+          if (deleteError) {
+            console.warn('Failed to delete old file:', deleteError);
+          } else {
+            console.log('Successfully deleted old file:', fileName);
+          }
+        }
+      } catch (err) {
+        console.warn('Error extracting/deleting old file:', err);
+      }
+    }
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
@@ -28,18 +55,29 @@ export async function POST(request: NextRequest) {
     // Generate unique filename
     const fileExtension = file.name.split('.').pop();
     const uniqueFilename = `${crypto.randomUUID()}.${fileExtension}`;
+    const filePath = `doctors_profiles/${uniqueFilename}`;
 
-    // Save to public/uploads/doctors_profiles
-    const uploadPath = join(process.cwd(), 'public', 'uploads', 'doctors_profiles', uniqueFilename);
+    // Upload to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('nexus_uploads')
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: false
+      });
 
-    await writeFile(uploadPath, buffer);
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return NextResponse.json({ error: 'Failed to upload file to storage' }, { status: 500 });
+    }
 
-    // Return the file path relative to public directory
-    const filePath = `/uploads/doctors_profiles/${uniqueFilename}`;
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('nexus_uploads')
+      .getPublicUrl(filePath);
 
     return NextResponse.json({
       success: true,
-      filePath: filePath
+      filePath: publicUrlData.publicUrl
     });
 
   } catch (error) {

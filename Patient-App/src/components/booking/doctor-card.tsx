@@ -36,12 +36,8 @@ const DoctorCard = memo(function DoctorCard({ doctor }: { doctor: DoctorData }) 
                             sizes="(max-width: 768px) 100vw, 224px"
                             className="object-cover object-top hover:scale-110 transition-transform duration-700 filter brightness-110 contrast-110"
                             priority
-                            onError={(e: any) => {
-                                // Reset to placeholder on error via standard img tag approach if needed, 
-                                // but with Next/Image we typically use blurDataURL or standardized paths.
-                                // For simplicity/robustness in this context:
-                                e.currentTarget.src = "/doctor-placeholder.svg"
-                            }}
+                            placeholder="blur"
+                            blurDataURL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdib3g9IjAgMCA0MDAgNDAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9InBhZGRpbmctYm90dG9tIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMWUyOTNiIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMGYxNzJhIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9InVybCgjZykiLz48Y2lyY2xlIGN4PSIyMDAiIGN5PSIxNzAiIHI9IjYwIiBmaWxsPSIjMzMzNDU2Ii8+PHBhdGggZD0iTTEwMCAzNTBRMTAwIDI3MCAyMDAgMjcwUTMwMCAyNzAgMzAwIDM1MCIgc3Ryb2tlPSIjMzMzNDU2IiBzdHJva2Utd2lkdGg9IjQwIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4="
                         />
                     </div>
                 </div>

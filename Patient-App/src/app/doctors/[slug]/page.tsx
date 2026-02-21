@@ -61,10 +61,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 }
 
 export async function generateStaticParams() {
-    const doctors = await prisma.doctor.findMany({ select: { slug: true } });
-    return doctors.map((doc) => ({
-        slug: doc.slug,
-    }));
+    try {
+        const doctors = await prisma.doctor.findMany({ select: { slug: true } });
+        return doctors.map((doc) => ({
+            slug: doc.slug,
+        }));
+    } catch (error) {
+        console.error("generateStaticParams Error:", error);
+        return [];
+    }
 }
 
 export default async function DoctorProfilePage({ params }: { params: Promise<{ slug: string }> }) {

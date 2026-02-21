@@ -8,10 +8,15 @@ import { notFound } from "next/navigation"
 export const revalidate = 3600;
 
 export async function generateStaticParams() {
-    const doctors = await prisma.doctor.findMany({ select: { slug: true } });
-    return doctors.map((doc) => ({
-        slug: doc.slug,
-    }));
+    try {
+        const doctors = await prisma.doctor.findMany({ select: { slug: true } });
+        return doctors.map((doc) => ({
+            slug: doc.slug,
+        }));
+    } catch (error) {
+        console.error("generateStaticParams Error:", error);
+        return [];
+    }
 }
 
 export default async function BookingPage({ params }: { params: Promise<{ slug: string }> }) {

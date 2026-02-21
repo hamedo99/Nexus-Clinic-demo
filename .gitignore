@@ -9,6 +9,11 @@ node_modules
 /Patient-App/.next
 out/
 
+# uploads
+public/uploads/
+/Dashboard/public/uploads/
+/Patient-App/public/uploads/
+
 # production
 /build
 /dist

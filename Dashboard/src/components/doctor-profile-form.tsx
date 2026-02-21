@@ -36,6 +36,9 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
         try {
             const formData = new FormData();
             formData.append('file', file);
+            if (profileImage) {
+                formData.append('oldFileUrl', profileImage);
+            }
 
             const response = await fetch('/api/upload', {
                 method: 'POST',
