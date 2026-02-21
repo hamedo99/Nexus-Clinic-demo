@@ -1,6 +1,6 @@
 "use client"
 import { memo } from "react"
-import { DoctorData } from "@nexus/shared"
+import { DoctorData } from "@/lib/shared-logic/types"
 import { Bone } from "lucide-react"
 import Image from "next/image"
 

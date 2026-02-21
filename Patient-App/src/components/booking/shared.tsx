@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils"
 import { GraduationCap, Award, FileText, ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
 
-import { DoctorData, BookingConfig } from "@nexus/shared"
+import { DoctorData, BookingConfig } from "@/lib/shared-logic/types"
 
 export interface Certification {
     icon: React.ReactNode

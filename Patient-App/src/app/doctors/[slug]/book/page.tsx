@@ -1,5 +1,8 @@
 import BookingClient from "@/components/booking-client"
-import { fetchDoctorBySlug, fetchBookingConfig, resolveMediaPath, prisma } from "@nexus/shared"
+import { fetchDoctorBySlug } from "@/lib/shared-logic/doctors"
+import { fetchBookingConfig } from "@/lib/shared-logic/bookings"
+import { resolveMediaPath } from "@/lib/shared-logic/utils"
+import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 
 export const revalidate = 3600;

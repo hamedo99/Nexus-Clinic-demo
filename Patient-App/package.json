@@ -7,13 +7,12 @@
     "build": "next build",
     "start": "next start -p 3001",
     "lint": "eslint",
-    "db:push": "npx prisma db push --schema=../prisma/schema.prisma",
-    "db:studio": "npx prisma studio --schema=../prisma/schema.prisma",
-    "db:generate": "npx prisma generate --schema=../prisma/schema.prisma",
+    "db:push": "npx prisma db push --schema=./prisma/schema.prisma",
+    "db:studio": "npx prisma studio --schema=./prisma/schema.prisma",
+    "db:generate": "npx prisma generate --schema=./prisma/schema.prisma",
     "postinstall": "npm run db:generate"
   },
   "dependencies": {
-    "@nexus/shared": "*",
     "@prisma/client": "^5.22.0",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -28,6 +27,7 @@
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "react": "19.2.3",
+    "react-is": "^19.0.0",
     "react-day-picker": "^9.13.2",
     "react-dom": "19.2.3",
     "tailwind-merge": "^3.4.0",
@@ -47,6 +47,6 @@
     "typescript": "^5"
   },
   "prisma": {
-    "schema": "../prisma/schema.prisma"
+    "schema": "./prisma/schema.prisma"
   }
 }

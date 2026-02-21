@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { prisma } from '@nexus/shared'
+import { prisma } from '@/lib/prisma'
 
 export default async function Home() {
   const firstDoctor = await prisma.doctor.findFirst({

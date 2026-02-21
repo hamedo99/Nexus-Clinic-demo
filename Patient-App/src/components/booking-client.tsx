@@ -4,7 +4,7 @@ import { memo } from "react";
 import DoctorCard from "./booking/doctor-card"
 import DoctorInfo from "./booking/doctor-info"
 import BookingForm from "./booking/booking-form"
-import { DoctorData, BookingConfig } from "@nexus/shared"
+import { DoctorData, BookingConfig } from "@/lib/shared-logic/types"
 
 export const BookingClient = memo(function BookingClient({ doctor, config }: { doctor: DoctorData, config?: BookingConfig }) {
 

@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
 import { format, isSameDay } from "date-fns"
 import { arSA } from "date-fns/locale"
 import { createBooking, getMonthAvailability } from "@/app/actions/booking"
-import { BookingConfig } from "@nexus/shared"
+import { BookingConfig } from "@/lib/shared-logic/types"
 
 // Types for availability
 interface AvailabilityData {

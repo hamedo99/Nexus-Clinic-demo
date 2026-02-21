@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
     fetchMonthAvailability,
     validateAndCreateBooking
-} from "@nexus/shared";
+} from "@/lib/shared-logic/bookings";
 
 /**
  * Calculates availability for a given month. (Patient Side)

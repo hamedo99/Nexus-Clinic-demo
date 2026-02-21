@@ -2,7 +2,10 @@ import { Suspense } from "react"
 import type { Metadata } from "next"
 import BookingClient from "@/components/booking-client"
 import BookingSkeleton from "@/components/booking/skeleton"
-import { fetchDoctorBySlug, fetchBookingConfig, resolveMediaPath, prisma } from "@nexus/shared"
+import { fetchDoctorBySlug } from "@/lib/shared-logic/doctors"
+import { fetchBookingConfig } from "@/lib/shared-logic/bookings"
+import { resolveMediaPath } from "@/lib/shared-logic/utils"
+import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 
 export const revalidate = 3600; // ISR: Revalidate every hour

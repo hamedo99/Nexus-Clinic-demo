@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { MapPin, Info, Award, GraduationCap, Star, Stethoscope } from "lucide-react"
 import { CertificationItem, CaseItem, StatCard } from "./shared"
-import { DoctorData } from "@nexus/shared"
+import { DoctorData } from "@/lib/shared-logic/types"
 
 const DoctorInfo = memo(function DoctorInfo({ doctor }: { doctor: DoctorData }) {
     return (
