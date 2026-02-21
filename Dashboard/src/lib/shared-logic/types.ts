@@ -23,9 +23,9 @@ export interface WorkingHours {
     end: number;
 }
 
-export interface ActionResponse {
+export interface ActionResponse<T = any> {
     success: boolean;
     message?: string;
     error?: string;
-    data?: any;
+    data?: T;
 }
