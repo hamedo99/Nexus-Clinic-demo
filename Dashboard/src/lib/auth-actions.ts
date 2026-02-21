@@ -58,9 +58,9 @@ export async function login(prevState: any, formData: FormData) {
             name: userWithPassword.name
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Login Check Error:", error);
-        return { error: "حدث خطأ في النظام" };
+        return { error: `حدث خطأ في النظام: ${error.message || String(error)}` };
     }
 
     redirect("/dashboard");
