@@ -14,7 +14,11 @@ export function cn(...inputs: ClassValue[]) {
 export function resolveMediaPath(path: string | null | undefined): string {
     const fallback = "/doctors/profile.jpg";
     if (!path || path === "/doctor-placeholder.png") return fallback;
-    if (path.startsWith("http") || path.startsWith("data:")) return path;
+
+    // If the path is already a full URL (like Supabase public URLs), return it as-is!
+    if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) {
+        return path;
+    }
 
     // Determine Base URL: 
     // 1. NEXT_PUBLIC_BASE_URL (Preferred for production/custom)

@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || process.env.EXPO_PUBLIC_SUPABASE_KEY || "";
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
 export async function POST(request: NextRequest) {
   try {
+    // Initialize Supabase client inside the handler
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+    // MUST use Service Role Key for bypassing RLS, otherwise it will fail with 500 due to our new policies
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || process.env.EXPO_PUBLIC_SUPABASE_KEY || "";
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing Supabase credentials.");
+      return NextResponse.json({ error: 'Server configuration error: Missing Supabase credentials.' }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const formData = await request.formData();
     const file = formData.get('file') as File;
     const oldFileUrl = formData.get('oldFileUrl') as string;
@@ -53,21 +59,24 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(bytes);
 
     // Generate unique filename
-    const fileExtension = file.name.split('.').pop();
+    const fileExtension = file.name.split('.').pop() || 'png';
     const uniqueFilename = `${crypto.randomUUID()}.${fileExtension}`;
     const filePath = `doctors_profiles/${uniqueFilename}`;
 
     // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('nexus_uploads')
       .upload(filePath, buffer, {
         contentType: file.type,
         upsert: false
       });
 
-    if (error) {
-      console.error('Supabase upload error:', error);
-      return NextResponse.json({ error: 'Failed to upload file to storage' }, { status: 500 });
+    if (uploadError) {
+      console.error('Supabase upload error:', uploadError);
+      return NextResponse.json({
+        error: 'Failed to upload file to storage. Check if SUPABASE_SERVICE_ROLE_KEY is set correctly.',
+        details: uploadError.message
+      }, { status: 500 });
     }
 
     // Get public URL
@@ -80,8 +89,8 @@ export async function POST(request: NextRequest) {
       filePath: publicUrlData.publicUrl
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload error:', error);
-    return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to upload file', details: error.message || String(error) }, { status: 500 });
   }
 }

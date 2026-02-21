@@ -14,11 +14,20 @@ export function cn(...inputs: ClassValue[]) {
 export function resolveMediaPath(path: string | null | undefined): string {
     const fallback = "/doctors/profile.jpg";
     if (!path || path === "/doctor-placeholder.png") return fallback;
-    if (path.startsWith("http") || path.startsWith("data:")) return path;
 
-    const baseUrl = process.env.NEXT_PUBLIC_DASHBOARD_URL || "";
+    // If the path is already a full URL (like Supabase public URLs), return it as-is!
+    if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) {
+        return path;
+    }
 
-    // Assets that are local to the Patient-App (old structure)
+    // Determine Base URL: 
+    // 1. NEXT_PUBLIC_BASE_URL (Preferred for production/custom)
+    // 2. Fallback to a production URL if VERCEL is true, else localhost
+    const isProd = process.env.NODE_ENV === "production" || process.env.VERCEL === "1";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL
+        || (isProd ? "https://nexus-dashboard-demo.vercel.app" : "http://localhost:3000");
+
+    // Assets that are local to the Dashboard (old structure)
     if (path.startsWith("/doctors/") || path.startsWith("/cases/")) return path;
 
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
