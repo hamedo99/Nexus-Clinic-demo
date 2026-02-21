@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  SECRETARY
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+// ... existing code ...
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   @default("password123") // Default for existing users
+  name      String?
+  role      Role     @default(SECRETARY)
+  
+  doctorId  String?
+  doctor    Doctor?  @relation(fields: [doctorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// ... existing code ...
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  TRIAL
+  DISABLED
+}
+
+model Doctor {
+  id          String   @id @default(uuid())
+  name        String
+  specialty   String
+  address     String?
+  slug        String   @unique
+  subscriptionStatus SubscriptionStatus @default(TRIAL)
+  
+  // Multi-tenant Clinic Settings
+  consultationPrice Int?     @default(25000)
+  patientsPerHour   Int?     @default(4)
+  clinicPhone       String?
+  clinicLogo        String?
+  workingHours      Json?    // Default: { start: 14, end: 21 }
+  
+  // Profile Management Module Fields
+  profile_image_path    String?
+  doctor_name           String?
+  specialty_title       String?
+  years_of_experience   Int?     @default(0)
+  Maps_url              String?
+  certificates_list     Json?    // Array of certificates (JSON Array)
+  working_hours_schedule Json?   // Working hours schedule (JSON)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  patients    Patient[]
+  appointments Appointment[]
+  blockedTimes BlockedTime[]
+
+  @@index([createdAt])
+  @@map("doctors")
+}
+
+model Patient {
+  id          String        @id @default(uuid())
+  fullName    String
+  phoneNumber String        @unique
+  birthDate   DateTime?
+  gender      String?       // "MALE", "FEMALE"
+  address     String?
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  doctorId    String?
+  doctor      Doctor?       @relation(fields: [doctorId], references: [id])
+  
+  appointments Appointment[]
+
+  @@index([doctorId])
+  @@index([createdAt])
+  @@index([fullName])
+  @@map("patients")
+}
+
+model Appointment {
+  id          String            @id @default(uuid())
+  patientId   String
+  patient     Patient           @relation(fields: [patientId], references: [id])
+  
+  doctorId    String?
+  doctor      Doctor?           @relation(fields: [doctorId], references: [id])
+
+  startTime   DateTime
+  endTime     DateTime
+  status      AppointmentStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // To handle conflicts/locking mechanism
+  isLocked    Boolean           @default(false) 
+
+  @@index([doctorId, startTime])
+  @@index([doctorId, status, startTime])
+  @@index([startTime, status])
+  @@index([patientId])
+  @@index([doctorId])
+  @@map("appointments")
+}
+
+model Setting {
+  id          String   @id @default(uuid())
+  key         String   @unique // e.g., "clinic_hours", "slot_duration"
+  value       Json
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model BlockedTime {
+  id          String   @id @default(uuid())
+  startTime   DateTime
+  endTime     DateTime
+  reason      String?
+  
+  doctorId    String?
+  doctor      Doctor?  @relation(fields: [doctorId], references: [id])
+  
+  createdAt   DateTime @default(now())
+
+  @@index([startTime, endTime])
+  @@index([doctorId])
+  @@map("blocked_time")
+}

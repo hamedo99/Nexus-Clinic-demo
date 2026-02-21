@@ -1,0 +1,10 @@
+{
+    "name": "@nexus/shared",
+    "version": "1.0.0",
+    "main": "index.ts",
+    "dependencies": {
+        "@prisma/client": "^5.22.0",
+        "clsx": "^2.1.1",
+        "tailwind-merge": "^3.5.0"
+    }
+}
