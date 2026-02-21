@@ -1,1 +1,1 @@
-export { cn } from "@nexus/shared";
+export { cn } from "./shared-logic/utils";
