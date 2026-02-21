@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@nexus/shared";
+import { prisma } from "@/lib/db";
 import { unstable_noStore as noStore } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { getClinicStatus } from "./clinic";

@@ -1,6 +1,7 @@
 "use server";
 
-import { prisma, fetchDoctorBySlug, fetchAllDoctors, fetchDoctorList } from "@nexus/shared";
+import { prisma } from "@/lib/db";
+import { fetchDoctorBySlug, fetchAllDoctors, fetchDoctorList } from "@/lib/shared-logic/doctors";
 import { revalidatePath, unstable_noStore as noStore } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { ActionResponse, WorkingHours } from "@/lib/types";

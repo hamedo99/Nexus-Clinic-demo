@@ -1,10 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-    prisma,
-    validateAndCreateBooking
-} from "@nexus/shared";
+import { prisma } from "@/lib/db";
+import { validateAndCreateBooking } from "@/lib/shared-logic/bookings";
 import { ActionResponse } from "@/lib/types";
 
 /**

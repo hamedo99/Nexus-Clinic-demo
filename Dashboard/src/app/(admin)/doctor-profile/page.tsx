@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { prisma } from "@nexus/shared";
+import { prisma } from "@/lib/db";
 import { DoctorProfileForm } from "@/components/doctor-profile-form";
 
 export default async function DoctorProfilePage() {

@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@nexus/shared";
+import { prisma } from "@/lib/db";
 import { createSession, logout } from "@/lib/auth";
 import { verifyPassword } from "@/lib/password";
 import { redirect } from "next/navigation";

@@ -1,13 +1,7 @@
-export * from "@nexus/shared";
+export * from "./shared-logic/types";
 
-export type ActionResponse<T = any> = { success: true; data: T; message?: string } | { success: false; error?: string; message?: string };
-
-// Dashboard specific types if any
 export interface DashboardStats {
-    clinicStatus: {
-        isOpen: boolean;
-        reason: string | null;
-    };
+    clinicStatus: any;
     appointments: any[];
     stats: {
         newPatients: number;
@@ -18,8 +12,5 @@ export interface DashboardStats {
         platformTotalPatients: number;
         isGlobal: boolean;
     };
-    chartData?: Array<{
-        date: string;
-        count: number;
-    }>;
+    chartData: { date: string; count: number }[];
 }
