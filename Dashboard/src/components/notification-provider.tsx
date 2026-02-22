@@ -19,20 +19,29 @@ export function NotificationProvider() {
         if (!lastChecked) return;
 
         let timeoutId: NodeJS.Timeout;
-        let pollDelay = 10000; // start with 10 seconds
+        let pollDelay = 15000; // Increased to 15 seconds
+        let consecutiveErrors = 0;
+        const MAX_ERRORS = 5;
 
         const poll = async () => {
             try {
                 const res = await fetch(`/api/appointments/latest?since=${encodeURIComponent(lastChecked)}`);
+
                 if (!res.ok) {
-                    // Increase delay on failure, max 1 minute
-                    pollDelay = Math.min(pollDelay * 1.5, 60000);
+                    consecutiveErrors++;
+                    if (consecutiveErrors >= MAX_ERRORS) {
+                        console.error("Polling stopped due to persistent errors.");
+                        return; // Stop polling
+                    }
+                    // Exponential backoff: 30s, 60s, 120s... max 5 mins
+                    pollDelay = Math.min(pollDelay * 2, 300000);
                     timeoutId = setTimeout(poll, pollDelay);
                     return;
                 }
 
-                // Reset delay on success
-                pollDelay = 10000;
+                // Reset on success
+                consecutiveErrors = 0;
+                pollDelay = 15000;
                 const data = await res.json();
 
                 if (data.appointments && data.appointments.length > 0) {
@@ -59,10 +68,15 @@ export function NotificationProvider() {
                         );
                     });
                 }
+
+                timeoutId = setTimeout(poll, pollDelay);
             } catch (error) {
                 console.error("Error polling appointments:", error);
-                pollDelay = Math.min(pollDelay * 1.5, 60000);
-            } finally {
+                consecutiveErrors++;
+                if (consecutiveErrors >= MAX_ERRORS) {
+                    return; // Stop polling
+                }
+                pollDelay = Math.min(pollDelay * 2, 300000);
                 timeoutId = setTimeout(poll, pollDelay);
             }
         };
