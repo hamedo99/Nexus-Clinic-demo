@@ -10,7 +10,8 @@ export default async function Home() {
     if (firstDoctor?.slug) {
       redirect(`/doctors/${firstDoctor.slug}`);
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.digest?.startsWith('NEXT_REDIRECT')) throw error;
     console.error("Home page Prisma error:", error);
   }
 

@@ -43,6 +43,10 @@ export async function GET(request: Request) {
 
     } catch (error: any) {
         console.error('Error fetching latest appointments:', error);
-        return NextResponse.json({ error: 'Failed' }, { status: 500 });
+        return NextResponse.json({
+            appointments: [],
+            serverTime: new Date().toISOString(),
+            error: 'Failed'
+        }, { status: 200 });
     }
 }

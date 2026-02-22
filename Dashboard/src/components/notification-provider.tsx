@@ -27,6 +27,11 @@ export function NotificationProvider() {
             try {
                 const res = await fetch(`/api/appointments/latest?since=${encodeURIComponent(lastChecked)}`);
 
+                if (res.status === 500) {
+                    console.error("Polling stopped due to persistent server error (500).");
+                    return; // Critical stop
+                }
+
                 if (!res.ok) {
                     consecutiveErrors++;
                     if (consecutiveErrors >= MAX_ERRORS) {
