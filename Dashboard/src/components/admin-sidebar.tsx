@@ -48,7 +48,7 @@ export function SidebarContent({ role, onNavItemClick }: { role?: string; onNavI
 
 export function AdminSidebar({ role }: { role?: string }) {
     return (
-        <aside className="w-64 border-l border-gray-200 dark:border-gray-700 hidden md:flex flex-col h-full">
+        <aside className="w-64 border-l border-gray-100 dark:border-gray-800 hidden md:flex flex-col h-full bg-white dark:bg-gray-800 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10 transition-all duration-300 relative">
             <SidebarContent role={role} />
         </aside>
     );
@@ -60,12 +60,14 @@ function NavLink({ href, icon, label, active = false, prefetch = true, onClick }
             href={href}
             prefetch={prefetch}
             onClick={onClick}
-            className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${active
-                ? "bg-primary/10 text-primary font-medium"
-                : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+            className={`flex items-center gap-3 p-3 rounded-l-lg transition-all duration-200 ${active
+                ? "bg-teal-50 text-teal-700 font-bold border-r-4 border-teal-600 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-500 shadow-sm"
+                : "text-slate-600 dark:text-gray-300 hover:bg-slate-50 border-r-4 border-transparent hover:border-slate-200 dark:hover:bg-gray-700 dark:hover:border-gray-600 font-medium"
                 }`}
         >
-            {icon}
+            <div className={`${active ? "text-teal-600 dark:text-teal-400" : "text-slate-400 dark:text-gray-400"}`}>
+                {icon}
+            </div>
             <span>{label}</span>
         </Link>
     );

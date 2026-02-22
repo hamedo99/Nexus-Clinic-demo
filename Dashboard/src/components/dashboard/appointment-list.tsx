@@ -37,35 +37,35 @@ export const AppointmentList = memo(function AppointmentList({ appointments, isG
     }
 
     return (
-        <div className="space-y-3">
+        <div className="flex flex-row md:flex-col gap-4 overflow-x-auto pb-4 md:pb-0 snap-x custom-scrollbar">
             {appointments.map((appointment) => (
                 <div
                     key={appointment.id}
-                    className="group flex flex-col gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700/50 hover:shadow-md hover:border-primary/20 transition-all duration-300 relative overflow-hidden shrink-0"
+                    className="group flex flex-col gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700/50 hover:shadow-md hover:border-teal-200 transition-all duration-300 relative overflow-hidden shrink-0 w-[280px] md:w-full snap-center"
                 >
-                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${appointment.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-blue-500'}`} />
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 ${appointment.status === 'CONFIRMED' ? 'bg-emerald-500' : 'bg-teal-500'}`} />
 
                     <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
-                            <div className={`h-10 w-10 rounded-full flex items-center justify-center font-bold text-lg shrink-0 shadow-sm ${appointment.status === 'CONFIRMED'
+                            <div className={`h-10 w-10 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 shadow-sm ${appointment.status === 'CONFIRMED'
                                 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
-                                : 'bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400'
+                                : 'bg-teal-100 text-teal-600 dark:bg-teal-500/20 dark:text-teal-400'
                                 }`}>
                                 {appointment.patient.fullName.charAt(0)}
                             </div>
-                            <div>
-                                <h4 className="font-bold text-gray-900 dark:text-gray-100 group-hover:text-primary transition-colors">
+                            <div className="flex flex-col">
+                                <h4 className="font-bold text-slate-800 dark:text-gray-100 group-hover:text-teal-600 transition-colors truncate max-w-[120px]">
                                     {appointment.patient.fullName}
                                 </h4>
                                 <div className="flex flex-col gap-1 mt-0.5">
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-gray-400">
                                         <Clock className="h-3 w-3" />
                                         <span className="font-medium font-mono dir-ltr">
                                             {new Date(appointment.startTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                                         </span>
                                     </div>
                                     {isGlobal && appointment.doctor && (
-                                        <div className="flex items-center gap-1 text-[10px] font-bold text-primary/70 bg-primary/5 px-2 py-0.5 rounded-md w-fit">
+                                        <div className="flex items-center gap-1 text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md w-fit">
                                             <Activity className="h-2 w-2" />
                                             <span>{appointment.doctor.name}</span>
                                         </div>
@@ -73,7 +73,7 @@ export const AppointmentList = memo(function AppointmentList({ appointments, isG
                                 </div>
                             </div>
                         </div>
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm ${appointment.status === 'CONFIRMED'
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold shadow-sm shrink-0 ${appointment.status === 'CONFIRMED'
                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-200 dark:border-transparent'
                             : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border border-amber-200 dark:border-transparent'
                             }`}>
@@ -81,8 +81,8 @@ export const AppointmentList = memo(function AppointmentList({ appointments, isG
                         </span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-gray-50 dark:border-gray-700/50 mt-1">
-                        <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-50 dark:border-gray-700/50 mt-1">
+                        <p className="text-xs text-slate-600 dark:text-gray-400 truncate max-w-[120px] font-medium">
                             {appointment.patient.phoneNumber}
                         </p>
                         <div className="opacity-80 group-hover:opacity-100 transition-opacity">

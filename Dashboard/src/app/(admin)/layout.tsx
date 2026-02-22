@@ -12,7 +12,7 @@ export default async function AdminLayout({
     const session: any = await getSession();
 
     return (
-        <div className="flex h-screen bg-gray-50 dark:bg-gray-900" dir="rtl">
+        <div className="flex h-screen bg-slate-50 dark:bg-gray-900" dir="rtl">
             <NotificationProvider />
             {/* Sidebar */}
             <AdminSidebar role={session?.role} />
