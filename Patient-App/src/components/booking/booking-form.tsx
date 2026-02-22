@@ -29,16 +29,25 @@ interface AvailabilityData {
 }
 
 export default function BookingForm({ config, doctorId }: { config?: BookingConfig, doctorId?: string }) {
+    // Prevent Hydration Errors on Vercel
+    const [isMounted, setIsMounted] = React.useState(false)
+
     // State
-    const [date, setDate] = React.useState<Date | undefined>(new Date())
+    const [date, setDate] = React.useState<Date | undefined>(undefined)
     const [selectedTime, setSelectedTime] = React.useState<string | null>(null)
-    const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date())
+    const [currentMonth, setCurrentMonth] = React.useState<Date>(new Date()) // initialized in useEffect later
     const [step, setStep] = React.useState(1)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
     const [errorState, setErrorState] = React.useState<{ isOpen: boolean, message: string }>({ isOpen: false, message: "" })
     const [paymentMethod, setPaymentMethod] = React.useState<"cash" | "zain">("cash")
     const [availability, setAvailability] = React.useState<AvailabilityData>({ blockedPeriods: [], fullyBookedDates: [], fullSlots: {}, exactBookedSlots: {} })
     const [isLoadingAvailability, setIsLoadingAvailability] = React.useState(false)
+
+    React.useEffect(() => {
+        setIsMounted(true)
+        setDate(new Date())
+        setCurrentMonth(new Date())
+    }, [])
 
     // Lazy load confetti
     const triggerConfetti = React.useCallback(async () => {
@@ -259,6 +268,11 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
     const handleBack = React.useCallback(() => {
         if (step > 1) setStep(step - 1)
     }, [step]);
+
+    // Prevent hydration errors by not rendering on server side
+    if (!isMounted) {
+        return <div className="w-full min-h-[400px] flex items-center justify-center"><div className="animate-pulse bg-slate-800/20 w-full h-[400px] rounded-[32px]"></div></div>; // Skeleton loader
+    }
 
     return (
         <div className="w-full relative">
