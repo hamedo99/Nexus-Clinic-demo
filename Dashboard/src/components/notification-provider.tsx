@@ -6,6 +6,12 @@ import { format, isSameDay } from "date-fns";
 import { ar } from "date-fns/locale";
 import { WifiOff } from "lucide-react";
 import { useDashboardStore } from "@/lib/store";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then(res => {
+    if (!res.ok) throw new Error("Network error");
+    return res.json();
+});
 
 export function NotificationProvider() {
     const [lastChecked, setLastChecked] = useState<string>("");
@@ -23,83 +29,45 @@ export function NotificationProvider() {
         audioRef.current = new Audio("/notification.ogg");
     }, []);
 
-    // Effect 1: Polling for new appointments
+    const { data: pollData, error } = useSWR(
+        lastChecked ? `/api/appointments/latest?since=${encodeURIComponent(lastChecked)}` : null,
+        fetcher,
+        { refreshInterval: 15000, revalidateOnFocus: true, errorRetryCount: 3, errorRetryInterval: 15000 }
+    );
+
     useEffect(() => {
-        if (!lastChecked) return;
+        if (error) {
+            setIsOffline(true);
+            return;
+        }
+        setIsOffline(false);
 
-        let timeoutId: NodeJS.Timeout;
-        let pollDelay = 15000;
-        let consecutiveErrors = 0;
-        const MAX_ERRORS = 3;
-        let isCurrent = true;
+        if (pollData && pollData.appointments && pollData.appointments.length > 0) {
+            setLastChecked(pollData.serverTime || new Date().toISOString());
 
-        const poll = async () => {
-            if (!isCurrent) return;
-
-            try {
-                const res = await fetch(`/api/appointments/latest?since=${encodeURIComponent(lastChecked)}`);
-
-                if (!isCurrent) return;
-
-                if (!res.ok) {
-                    consecutiveErrors++;
-                    if (consecutiveErrors >= MAX_ERRORS) setIsOffline(true);
-                    pollDelay = Math.min(pollDelay * 1.5, 60000);
-                    timeoutId = setTimeout(poll, pollDelay);
-                    return;
-                }
-
-                setIsOffline(false);
-                consecutiveErrors = 0;
-                pollDelay = 15000;
-                const data = await res.json();
-
-                if (!isCurrent) return;
-
-                if (data.appointments && data.appointments.length > 0) {
-                    setLastChecked(data.serverTime || new Date().toISOString());
-
-                    if (audioRef.current) {
-                        audioRef.current.currentTime = 0;
-                        audioRef.current.play().catch(e => console.error("Sound failed:", e));
-                    }
-
-                    data.appointments.forEach((appointment: any) => {
-                        const timeStr = format(new Date(appointment.startTime), 'hh:mm a', { locale: ar });
-
-                        // 1. Add to Global Notification Store
-                        addNotification({
-                            title: "حجز جديد",
-                            message: `حجز جديد من المريض (${appointment.patient.fullName}) الساعة ${timeStr}`,
-                            type: 'appointment'
-                        });
-
-                        // 2. Show Toast
-                        toast.success(`${appointment.patient.fullName} - ${timeStr}`, {
-                            duration: 5000,
-                            position: 'bottom-right',
-                            icon: '🗓️',
-                            style: { background: '#0f172a', color: '#fff', fontSize: '13px', fontWeight: 'bold' }
-                        });
-                    });
-                } else {
-                    timeoutId = setTimeout(poll, pollDelay);
-                }
-            } catch (error) {
-                if (!isCurrent) return;
-                consecutiveErrors++;
-                if (consecutiveErrors >= MAX_ERRORS) setIsOffline(true);
-                pollDelay = Math.min(pollDelay * 2, 120000);
-                timeoutId = setTimeout(poll, pollDelay);
+            if (audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(e => console.error("Sound failed:", e));
             }
-        };
 
-        timeoutId = setTimeout(poll, pollDelay);
-        return () => {
-            isCurrent = false;
-            clearTimeout(timeoutId);
-        };
-    }, [lastChecked, addNotification]);
+            pollData.appointments.forEach((appointment: any) => {
+                const timeStr = format(new Date(appointment.startTime), 'hh:mm a', { locale: ar });
+
+                addNotification({
+                    title: "حجز جديد",
+                    message: `حجز جديد من المريض (${appointment.patient.fullName}) الساعة ${timeStr}`,
+                    type: 'appointment'
+                });
+
+                toast.success(`${appointment.patient.fullName} - ${timeStr}`, {
+                    duration: 5000,
+                    position: 'bottom-right',
+                    icon: '🗓️',
+                    style: { background: '#0f172a', color: '#fff', fontSize: '13px', fontWeight: 'bold' }
+                });
+            });
+        }
+    }, [pollData, error, addNotification]);
 
     // Effect 2: Reminders & Milestones
     useEffect(() => {

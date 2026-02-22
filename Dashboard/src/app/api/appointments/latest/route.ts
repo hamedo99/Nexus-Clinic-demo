@@ -24,11 +24,15 @@ export async function GET(request: Request) {
                 createdAt: {
                     gt: dateSince
                 },
-                ...(session.role === 'SECRETARY' && session.doctorId ? { doctorId: session.doctorId } : {})
+                ...(session.role !== 'ADMIN' && session.doctorId ? { doctorId: session.doctorId } : {})
             },
-            include: {
-                patient: true,
-                doctor: true
+            select: {
+                id: true,
+                startTime: true,
+                status: true,
+                createdAt: true,
+                patient: { select: { id: true, fullName: true, phoneNumber: true } },
+                doctor: { select: { id: true, name: true } }
             },
             orderBy: {
                 createdAt: 'asc'

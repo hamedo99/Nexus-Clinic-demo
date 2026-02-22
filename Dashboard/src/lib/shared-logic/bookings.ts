@@ -250,7 +250,7 @@ export async function validateAndCreateBooking(data: {
     try {
         const patient = await prisma.patient.upsert({
             where: { phoneNumber: patientPhone },
-            update: { fullName: patientName },
+            update: { fullName: patientName, doctorId: doctorId },
             create: { fullName: patientName, phoneNumber: patientPhone, doctorId: doctorId }
         });
 

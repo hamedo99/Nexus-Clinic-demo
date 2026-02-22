@@ -70,7 +70,7 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
         }, 250);
     }, []);
 
-    const [formData, setFormData] = React.useState({ name: "", phone: "" })
+    const [formData, setFormData] = React.useState({ name: "", phone: "", website_url: "" })
     const [errors, setErrors] = React.useState({ name: "", phone: "" })
 
     // Default config if not provided
@@ -246,6 +246,7 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
                 const formDataToSend = new FormData();
                 formDataToSend.append("name", formData.name);
                 formDataToSend.append("phone", formData.phone);
+                if (formData.website_url) formDataToSend.append("website_url", formData.website_url);
                 formDataToSend.append("date", format(date!, "yyyy-MM-dd"));
                 formDataToSend.append("time", formatTimeForServer(selectedTime!));
                 if (doctorId) {
@@ -276,7 +277,7 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
         setStep(1);
         setDate(new Date());
         setSelectedTime(null);
-        setFormData({ name: "", phone: "" });
+        setFormData({ name: "", phone: "", website_url: "" });
     }, []);
 
     // Stable structure for hydration
@@ -381,6 +382,10 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
                                             <div className="absolute left-4 top-3.5 flex items-center gap-2 pointer-events-none z-10"><span className="text-xl">🇮🇶</span><div className="h-6 w-[1px] bg-slate-700" /></div>
                                             <Input id="phone" type="tel" value={formData.phone} onChange={(e) => { const val = e.target.value.replace(/[^0-9]/g, ''); if (val.length <= 11) setFormData({ ...formData, phone: val }) }} className={cn("h-14 bg-slate-950/50 border-slate-800 pl-16 text-lg text-left focus:ring-cyan-500/50 focus:border-cyan-500 transition-all rounded-xl tracking-widest font-mono", errors.phone && "border-red-500/50 focus:ring-red-500/20")} placeholder="0770 123 4567" />
                                             <Phone className="absolute right-4 top-4 text-slate-500 w-5 h-5 group-focus-within:text-cyan-400 transition-colors" />
+                                        </div>
+                                        {/* Honeypot field for bot spam prevention */}
+                                        <div className="opacity-0 absolute -z-10" aria-hidden="true">
+                                            <Input tabIndex={-1} autoComplete="off" id="website_url" name="website_url" value={formData.website_url} onChange={(e) => setFormData({ ...formData, website_url: e.target.value })} />
                                         </div>
                                         <div className="flex justify-between items-center px-1">
                                             {errors.phone ? <p className="text-red-400 text-sm animate-in slide-in-from-top-1">{errors.phone}</p> : <p className="text-slate-500 text-xs">يجب أن يبدأ ب 07 ويتكون من 11 رقم</p>}

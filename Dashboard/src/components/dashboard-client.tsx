@@ -11,7 +11,10 @@ import { getDashboardStats } from "@/lib/actions";
 import { DashboardHeader } from "./dashboard/dashboard-header";
 import { StatsGrid } from "./dashboard/stats-grid";
 import { AppointmentList } from "./dashboard/appointment-list";
-import { BookingsChart } from "./dashboard/bookings-chart";
+const BookingsChart = dynamic(() => import("./dashboard/bookings-chart").then(mod => mod.BookingsChart), {
+    ssr: false,
+    loading: () => <div className="h-48 w-full animate-pulse bg-gray-50 dark:bg-gray-800/50 rounded-2xl mt-8" />
+});
 
 const CalendarView = dynamic(() => import("@/components/calendar-view").then(mod => mod.CalendarView), {
     ssr: false,

@@ -22,9 +22,14 @@ export async function getPatients(query: string = "") {
                     { phoneNumber: { contains: query } },
                 ],
             },
-            include: {
+            select: {
+                id: true,
+                fullName: true,
+                phoneNumber: true,
+                createdAt: true,
                 appointments: {
                     where: doctorFilter,
+                    select: { id: true, startTime: true, status: true },
                     orderBy: { startTime: 'desc' },
                     take: 1
                 }
