@@ -19,37 +19,43 @@ export function NotificationProvider() {
         if (!lastChecked) return;
 
         let timeoutId: NodeJS.Timeout;
-        let pollDelay = 15000; // Increased to 15 seconds
+        let pollDelay = 15000;
         let consecutiveErrors = 0;
         const MAX_ERRORS = 5;
+        let isCurrent = true;
 
         const poll = async () => {
+            if (!isCurrent) return;
+
             try {
                 const res = await fetch(`/api/appointments/latest?since=${encodeURIComponent(lastChecked)}`);
 
+                if (!isCurrent) return;
+
                 if (res.status === 500) {
-                    console.error("Polling stopped due to persistent server error (500).");
-                    return; // Critical stop
+                    console.error("Polling stopped due to server error (500).");
+                    return;
                 }
 
                 if (!res.ok) {
                     consecutiveErrors++;
                     if (consecutiveErrors >= MAX_ERRORS) {
                         console.error("Polling stopped due to persistent errors.");
-                        return; // Stop polling
+                        return;
                     }
-                    // Exponential backoff: 30s, 60s, 120s... max 5 mins
                     pollDelay = Math.min(pollDelay * 2, 300000);
                     timeoutId = setTimeout(poll, pollDelay);
                     return;
                 }
 
-                // Reset on success
                 consecutiveErrors = 0;
                 pollDelay = 15000;
                 const data = await res.json();
 
+                if (!isCurrent) return;
+
                 if (data.appointments && data.appointments.length > 0) {
+                    // Update state - this will trigger current effect cleanup and run a new one
                     setLastChecked(data.serverTime || new Date().toISOString());
 
                     if (audioRef.current) {
@@ -59,7 +65,6 @@ export function NotificationProvider() {
 
                     data.appointments.forEach((appointment: any) => {
                         const timeStr = format(new Date(appointment.startTime), 'hh:mm a', { locale: ar });
-
                         toast.success(
                             `يوجد حجز جديد الآن!
                             المريض: ${appointment.patient.fullName}
@@ -72,15 +77,15 @@ export function NotificationProvider() {
                             }
                         );
                     });
+                } else {
+                    // No new appointments - keep polling on the same timer
+                    timeoutId = setTimeout(poll, pollDelay);
                 }
-
-                timeoutId = setTimeout(poll, pollDelay);
             } catch (error) {
+                if (!isCurrent) return;
                 console.error("Error polling appointments:", error);
                 consecutiveErrors++;
-                if (consecutiveErrors >= MAX_ERRORS) {
-                    return; // Stop polling
-                }
+                if (consecutiveErrors >= MAX_ERRORS) return;
                 pollDelay = Math.min(pollDelay * 2, 300000);
                 timeoutId = setTimeout(poll, pollDelay);
             }
@@ -88,7 +93,10 @@ export function NotificationProvider() {
 
         timeoutId = setTimeout(poll, pollDelay);
 
-        return () => clearTimeout(timeoutId);
+        return () => {
+            isCurrent = false;
+            clearTimeout(timeoutId);
+        };
     }, [lastChecked]);
 
     return <Toaster />;

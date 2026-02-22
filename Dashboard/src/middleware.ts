@@ -21,7 +21,8 @@ export async function middleware(request: NextRequest) {
     }
 
     // 2. If trying to access login page WITH session -> Redirect to Dashboard
-    if (isLoginPage && session) {
+    // But DON'T redirect if it's a POST request (Server Action processing)
+    if (isLoginPage && session && request.method !== 'POST') {
         // Verify session validity
         const payload = await verifySessionToken(session);
         if (payload) {
