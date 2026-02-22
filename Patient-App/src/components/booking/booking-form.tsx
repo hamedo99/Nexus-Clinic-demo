@@ -261,7 +261,7 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
     }, [step]);
 
     return (
-        <>
+        <div className="w-full relative">
             {/* Stepper */}
             <div className="flex justify-center items-center py-6 sticky top-0 z-30 backdrop-blur-xl md:backdrop-blur-none rounded-b-2xl mb-4">
                 <div className="flex items-center gap-3 md:gap-6 bg-[#0f172a]/90 p-2 md:p-3 rounded-full border border-slate-800 shadow-xl backdrop-blur-md">
@@ -432,6 +432,6 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
             <Dialog open={errorState.isOpen} onOpenChange={(v) => setErrorState({ ...errorState, isOpen: v })}>
                 <DialogContent className="bg-slate-900 border-slate-800 text-white"><DialogHeader><DialogTitle className="text-red-400">تنبيه</DialogTitle><DialogDescription className="text-slate-300">{errorState.message}</DialogDescription></DialogHeader><Button onClick={() => setErrorState({ ...errorState, isOpen: false })} className="bg-slate-800 hover:bg-slate-700 text-white">حسناً</Button></DialogContent>
             </Dialog>
-        </>
+        </div>
     )
 }
