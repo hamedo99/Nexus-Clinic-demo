@@ -6,13 +6,13 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard, Users, Calendar, Settings, LogOut } from "lucide-react";
 import { logoutAction } from "@/lib/auth-actions";
 
-export function AdminSidebar({ role }: { role?: string }) {
+export function SidebarContent({ role, onNavItemClick }: { role?: string; onNavItemClick?: () => void }) {
     const pathname = usePathname();
 
     return (
-        <aside className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 hidden md:flex flex-col h-full">
+        <div className="flex flex-col h-full bg-white dark:bg-gray-800">
             <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <Link href="/dashboard" className="group block" prefetch={true}>
+                <Link href="/dashboard" className="group block" onClick={onNavItemClick}>
                     <h1 className="text-2xl font-bold text-primary group-hover:text-primary/80 transition-colors">NexusClinic</h1>
                     <p className="text-xs text-muted-foreground mt-1">نظام إدارة العيادة</p>
                 </Link>
@@ -20,15 +20,15 @@ export function AdminSidebar({ role }: { role?: string }) {
             </div>
 
             <nav className="flex-1 p-4 space-y-2">
-                <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} label="لوحة التحكم" active={pathname === "/dashboard"} prefetch={true} />
+                <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} label="لوحة التحكم" active={pathname === "/dashboard"} onClick={onNavItemClick} />
 
                 {role === "ADMIN" && (
-                    <NavLink href="/doctors" icon={<Users size={20} className="text-blue-600" />} label="إدارة الأطباء" active={pathname === "/doctors"} prefetch={true} />
+                    <NavLink href="/doctors" icon={<Users size={20} className="text-blue-600" />} label="إدارة الأطباء" active={pathname === "/doctors"} onClick={onNavItemClick} />
                 )}
 
-                <NavLink href="/patients" icon={<Users size={20} />} label="سجل المرضى" active={pathname === "/patients"} prefetch={true} />
-                <NavLink href="/calendar" icon={<Calendar size={20} />} label="التقويم" active={pathname === "/calendar"} prefetch={true} />
-                <NavLink href="/settings" icon={<Settings size={20} />} label="الإعدادات" active={pathname === "/settings"} prefetch={true} />
+                <NavLink href="/patients" icon={<Users size={20} />} label="سجل المرضى" active={pathname === "/patients"} onClick={onNavItemClick} />
+                <NavLink href="/calendar" icon={<Calendar size={20} />} label="التقويم" active={pathname === "/calendar"} onClick={onNavItemClick} />
+                <NavLink href="/settings" icon={<Settings size={20} />} label="الإعدادات" active={pathname === "/settings"} onClick={onNavItemClick} />
             </nav>
 
             <div className="p-4 border-t border-gray-200 dark:border-gray-700">
@@ -42,15 +42,24 @@ export function AdminSidebar({ role }: { role?: string }) {
                     </button>
                 </form>
             </div>
+        </div>
+    );
+}
+
+export function AdminSidebar({ role }: { role?: string }) {
+    return (
+        <aside className="w-64 border-l border-gray-200 dark:border-gray-700 hidden md:flex flex-col h-full">
+            <SidebarContent role={role} />
         </aside>
     );
 }
 
-function NavLink({ href, icon, label, active = false, prefetch = true }: { href: string; icon: React.ReactNode; label: string; active?: boolean; prefetch?: boolean }) {
+function NavLink({ href, icon, label, active = false, prefetch = true, onClick }: { href: string; icon: React.ReactNode; label: string; active?: boolean; prefetch?: boolean; onClick?: () => void }) {
     return (
         <Link
             href={href}
             prefetch={prefetch}
+            onClick={onClick}
             className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${active
                 ? "bg-primary/10 text-primary font-medium"
                 : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"

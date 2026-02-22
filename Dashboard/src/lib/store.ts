@@ -1,15 +1,29 @@
 import { create } from 'zustand';
 import { DashboardStats } from './types';
 
+export interface Notification {
+    id: string;
+    title: string;
+    message: string;
+    type: 'appointment' | 'reminder' | 'success' | 'info';
+    time: string;
+    read: boolean;
+}
+
 interface DashboardStore {
     data: Record<string, DashboardStats>; // Keyed by doctorId or 'ALL'
+    notifications: Notification[];
     setData: (key: string, data: DashboardStats) => void;
     updateAppointmentStatus: (key: string, id: string, status: "CONFIRMED" | "CANCELLED") => void;
     addAppointment: (key: string, newAppointment: any) => void;
+    addNotification: (n: Omit<Notification, 'id' | 'read' | 'time'>) => void;
+    markAsRead: (id: string) => void;
+    clearNotifications: () => void;
 }
 
 export const useDashboardStore = create<DashboardStore>((set) => ({
     data: {},
+    notifications: [],
     setData: (key: string, data: DashboardStats) => set((state: DashboardStore) => ({
         data: { ...state.data, [key]: data }
     })),
@@ -58,5 +72,20 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
         return {
             data: { ...state.data, [key]: newData }
         };
-    })
+    }),
+    addNotification: (n) => set((state) => ({
+        notifications: [
+            {
+                ...n,
+                id: Math.random().toString(36).substring(7),
+                time: new Date().toISOString(),
+                read: false
+            },
+            ...state.notifications
+        ].slice(0, 20) // Keep last 20
+    })),
+    markAsRead: (id) => set((state) => ({
+        notifications: state.notifications.map(n => n.id === id ? { ...n, read: true } : n)
+    })),
+    clearNotifications: () => set({ notifications: [] })
 }));

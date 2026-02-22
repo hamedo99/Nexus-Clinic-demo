@@ -91,7 +91,7 @@ export function DashboardClient({ initialData, role, userName, doctorId, allDoct
     }, [displayData, mutate, refresh]);
 
     return (
-        <div className="space-y-8 p-1" dir="rtl">
+        <div className="space-y-4 md:space-y-8 p-1" dir="rtl">
             <DashboardHeader
                 role={role}
                 userName={userName}
@@ -108,9 +108,9 @@ export function DashboardClient({ initialData, role, userName, doctorId, allDoct
 
             <BookingsChart data={displayData.chartData} />
 
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
                 {/* Calendar View */}
-                <div className="xl:col-span-2 space-y-4">
+                <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
                     <h2 className="text-xl font-semibold flex items-center gap-2">
                         <Activity className="h-5 w-5 text-primary" />
                         الجدول الزمني {stats.isGlobal && "(جميع الأطباء)"}
@@ -124,19 +124,21 @@ export function DashboardClient({ initialData, role, userName, doctorId, allDoct
                                 </span>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="h-[600px] p-0" dir="ltr">
-                            <CalendarView appointments={appointments} />
+                        <CardContent className="h-[500px] md:h-[600px] p-0 overflow-x-auto" dir="ltr">
+                            <div className="min-w-[500px] h-full">
+                                <CalendarView appointments={appointments} />
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
 
                 {/* Appointment List */}
-                <div className="xl:col-span-1 space-y-4">
+                <div className="lg:col-span-2 xl:col-span-1 space-y-4 order-1 lg:order-2">
                     <h2 className="text-xl font-semibold flex items-center gap-2">
                         <Users className="h-5 w-5 text-primary" />
                         {stats.isGlobal ? "نظام التنسيق" : "أحدث المواعيد"}
                     </h2>
-                    <Card className="border-none shadow-lg h-[665px] flex flex-col rounded-2xl overflow-hidden">
+                    <Card className="border-none shadow-lg h-[500px] md:h-auto md:max-h-[665px] flex flex-col rounded-2xl overflow-hidden">
                         <CardContent className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                             <AppointmentList
                                 appointments={appointments}
