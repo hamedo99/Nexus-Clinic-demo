@@ -1,68 +1,53 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState, useMemo } from "react";
+import { useEffect, useCallback } from "react";
+import useSWR from "swr";
 import { getDashboardStats } from "@/lib/actions";
 import { useDashboardStore } from "@/lib/store";
 import { DashboardStats } from "@/lib/types";
 
 export function useDashboardData(initialData?: DashboardStats, filterDoctorId?: string) {
     const key = filterDoctorId || 'ALL';
-    // Use specific selectors to prevent re-renders on irrelevant store changes
-    const storedData = useDashboardStore(useCallback(state => state.data[key], [key]));
     const setData = useDashboardStore(state => state.setData);
 
-    const isMounted = useRef(true);
-    const [loading, setLoading] = useState(!storedData && !initialData);
-
-    // Initialize store on first mount if missing and initial data provided
+    // Sync initial data to the store on mount so other components have baseline data
     useEffect(() => {
-        if (!useDashboardStore.getState().data['ALL'] && initialData && !filterDoctorId) {
-            useDashboardStore.getState().setData('ALL', initialData);
+        if (initialData) {
+            setData(key, initialData);
         }
-    }, [initialData, filterDoctorId]);
+    }, [initialData, key, setData]);
 
-    const refresh = useCallback(async (showLoading = true) => {
-        try {
-            if (showLoading) setLoading(true);
-            const newData = await getDashboardStats(filterDoctorId);
-            if (isMounted.current && newData) {
-                setData(key, newData);
+    // Use SWR for fetching, caching, and revalidation
+    const { data, error, mutate, isLoading } = useSWR(
+        ['dashboardStats', key],
+        async ([, doctorId]) => {
+            const id = doctorId === 'ALL' ? undefined : doctorId;
+            const newData = await getDashboardStats(id);
+            if (newData) {
+                // Keep the global state synced for background tasks (reminders, notifications)
+                setData(doctorId, newData);
             }
-        } catch (err) {
-            if (isMounted.current) {
-                console.error("Failed to refresh dashboard data", err);
-            }
-        } finally {
-            if (isMounted.current) setLoading(false);
+            return newData;
+        },
+        {
+            fallbackData: initialData,
+            refreshInterval: 60000, // 1 minute background automated polling
+            revalidateOnFocus: true, // Fetch instantly when window gets focus
+            revalidateIfStale: false,
         }
-    }, [filterDoctorId, key, setData]);
+    );
 
-    useEffect(() => {
-        isMounted.current = true;
-        // Background SWR fetch - only show loading if we don't have data yet
-        refresh(!storedData && !initialData);
-
-        const intervalId = setInterval(() => refresh(false), 60000); // 1-minute automated polling for freshness
-
-        return () => {
-            isMounted.current = false;
-            clearInterval(intervalId);
-        };
-    }, [refresh, !!storedData, !!initialData]);
-
-    // Derived properties for optimistic compatibility
-    const data = useMemo(() => storedData || (key === 'ALL' ? initialData : undefined), [storedData, initialData, key]);
-
-    // Abstract mutate to just trigger a refresh (since Zustand optimistic covers it)
-    const mutate = useCallback((newData: DashboardStats) => {
-        setData(key, newData);
-    }, [key, setData]);
+    // Abstract mutate to update both SWR cache optimistically and Zustand global store
+    const customMutate = useCallback((optimisticData: DashboardStats) => {
+        setData(key, optimisticData);
+        mutate(optimisticData, false); // Update SWR without triggering an immediate re-fetch
+    }, [key, setData, mutate]);
 
     return {
-        data,
-        loading,
-        error: null,
-        mutate,
-        refresh
+        data: data,
+        loading: isLoading,
+        error: error,
+        mutate: customMutate,
+        refresh: () => mutate()
     };
 }

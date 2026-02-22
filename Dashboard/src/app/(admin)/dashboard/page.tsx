@@ -1,8 +1,18 @@
 import { DashboardClient } from "@/components/dashboard-client";
 import { getDashboardStats, getDoctorList } from "@/lib/actions";
 import { getSession } from "@/lib/auth";
+import { Suspense } from "react";
+import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 
-export default async function DashboardPage() {
+export default function DashboardPage() {
+    return (
+        <Suspense fallback={<DashboardSkeleton />}>
+            <DashboardContent />
+        </Suspense>
+    );
+}
+
+async function DashboardContent() {
     const session: any = await getSession();
 
     // Parallelize core data and supplementary doctor list

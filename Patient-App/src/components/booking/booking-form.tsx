@@ -445,7 +445,7 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
                         {step > 1 ? (
                             <Button variant="outline" onClick={handleBack} className="h-12 px-8 rounded-xl border-slate-700 hover:bg-slate-800 text-slate-300 gap-2">السابق</Button>
                         ) : (<div></div>)}
-                        <Button onClick={handleNext} disabled={isSubmitting} className={cn("h-12 px-10 rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 transition-all active:scale-95", isSubmitting ? "opacity-70 cursor-wait" : "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white")}>
+                        <Button onClick={handleNext} disabled={isSubmitting} className={cn("h-12 px-10 rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 transition-all active:scale-95", isSubmitting ? "opacity-70 cursor-wait" : "bg-cyan-500 hover:bg-cyan-400 text-white")}>
                             {isSubmitting ? "جاري الحجز..." : step === 3 ? "تأكيد الحجز" : "التالي"}
                         </Button>
                     </div>
