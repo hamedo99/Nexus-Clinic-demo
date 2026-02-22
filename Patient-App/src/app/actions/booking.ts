@@ -1,6 +1,5 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import {
     fetchMonthAvailability,
     validateAndCreateBooking
@@ -43,7 +42,6 @@ export async function createBooking(prevState: any, formData: FormData) {
     });
 
     if (result.success) {
-        revalidatePath("/dashboard");
         return { message: "تم إرسال طلب الحجز بنجاح!", success: true };
     }
 

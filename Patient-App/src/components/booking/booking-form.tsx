@@ -1,5 +1,6 @@
 "use client"
 import React from "react"
+import { useRouter } from "next/navigation"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -42,6 +43,7 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
     const [paymentMethod, setPaymentMethod] = React.useState<"cash" | "zain">("cash")
     const [availability, setAvailability] = React.useState<AvailabilityData>({ blockedPeriods: [], fullyBookedDates: [], fullSlots: {}, exactBookedSlots: {} })
     const [isLoadingAvailability, setIsLoadingAvailability] = React.useState(false)
+    const router = useRouter()
 
     React.useEffect(() => {
         setIsMounted(true)
@@ -432,7 +434,7 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
                                 </div>
                                 <div className="space-y-3 pt-4">
                                     <Button className="w-full h-14 text-lg font-bold bg-[#25D366] hover:bg-[#128C7E] text-white rounded-2xl shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95" onClick={() => { const text = `مرحباً، لقد قمت بحجز موعد باسم ${formData.name} في تاريخ ${date && format(date, 'yyyy-MM-dd')} الساعة ${selectedTime}.`; window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank'); }}><Share2 className="w-5 h-5" />مشاركة عبر واتساب</Button>
-                                    <Button variant="outline" className="w-full h-14 text-lg font-bold border-slate-700 hover:bg-slate-800 text-slate-300 hover:text-white rounded-2xl transition-all" onClick={handleReset}>العودة للرئيسية</Button>
+                                    <Button variant="outline" className="w-full h-14 text-lg font-bold border-slate-700 hover:bg-slate-800 text-slate-300 hover:text-white rounded-2xl transition-all" onClick={() => router.push('/')}>العودة للرئيسية</Button>
                                 </div>
                             </Card>
                         </div>
