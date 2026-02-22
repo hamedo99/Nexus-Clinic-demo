@@ -14,7 +14,8 @@ interface DoctorsClientProps {
 }
 
 const DoctorCard = memo(({ doctor }: { doctor: any }) => {
-    const bookingUrl = typeof window !== 'undefined' ? `${window.location.origin}/book/${doctor.slug}` : "";
+    const patientUrl = process.env.NEXT_PUBLIC_PATIENT_APP_URL || "https://nexus-clinic-demo.vercel.app";
+    const bookingUrl = `${patientUrl}/doctors/${doctor.slug}/book`;
 
     return (
         <Card className="hover:shadow-lg transition-shadow duration-300 relative group border-primary/10 overflow-hidden">
@@ -64,16 +65,15 @@ const DoctorCard = memo(({ doctor }: { doctor: any }) => {
                         <div className="flex items-center gap-2">
                             <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-900 p-2 rounded-md border border-gray-200 dark:border-gray-800 flex-1">
                                 <code className="text-xs truncate text-left text-primary/80 font-mono" dir="ltr">
-                                    /book/{doctor.slug}
+                                    {bookingUrl.replace(/^https?:\/\//, '')}
                                 </code>
                                 <Button size="icon" variant="ghost" className="h-6 w-6 hover:text-primary transition-colors" onClick={() => {
-                                    const fullUrl = `${window.location.origin}/book/${doctor.slug}`;
-                                    navigator.clipboard.writeText(fullUrl);
+                                    navigator.clipboard.writeText(bookingUrl);
                                 }}>
                                     <Copy size={12} />
                                 </Button>
                             </div>
-                            <Link href={`/book/${doctor.slug}`} target="_blank">
+                            <Link href={bookingUrl} target="_blank">
                                 <Button size="sm" variant="outline" className="gap-2 text-xs border-dashed hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-all duration-300">
                                     <ExternalLink size={14} />
                                     معاينة

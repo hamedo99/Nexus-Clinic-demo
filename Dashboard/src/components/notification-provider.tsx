@@ -18,24 +18,31 @@ export function NotificationProvider() {
     useEffect(() => {
         if (!lastChecked) return;
 
-        const interval = setInterval(async () => {
+        let timeoutId: NodeJS.Timeout;
+        let pollDelay = 10000; // start with 10 seconds
+
+        const poll = async () => {
             try {
                 const res = await fetch(`/api/appointments/latest?since=${encodeURIComponent(lastChecked)}`);
-                if (!res.ok) return;
+                if (!res.ok) {
+                    // Increase delay on failure, max 1 minute
+                    pollDelay = Math.min(pollDelay * 1.5, 60000);
+                    timeoutId = setTimeout(poll, pollDelay);
+                    return;
+                }
 
+                // Reset delay on success
+                pollDelay = 10000;
                 const data = await res.json();
 
                 if (data.appointments && data.appointments.length > 0) {
-                    // Update checking time
                     setLastChecked(data.serverTime || new Date().toISOString());
 
-                    // Play sound
                     if (audioRef.current) {
                         audioRef.current.currentTime = 0;
                         audioRef.current.play().catch(e => console.error("Could not play sound:", e));
                     }
 
-                    // Show a toast for each new appointment
                     data.appointments.forEach((appointment: any) => {
                         const timeStr = format(new Date(appointment.startTime), 'hh:mm a', { locale: ar });
 
@@ -47,24 +54,22 @@ export function NotificationProvider() {
                                 duration: 5000,
                                 position: 'top-left',
                                 icon: '🔔',
-                                style: {
-                                    background: '#1e293b',
-                                    color: '#fff',
-                                    border: '1px solid #334155',
-                                    fontWeight: 'bold',
-                                    padding: '16px',
-                                    borderRadius: '12px'
-                                },
+                                style: { background: '#1e293b', color: '#fff', border: '1px solid #334155', fontWeight: 'bold', padding: '16px', borderRadius: '12px' }
                             }
                         );
                     });
                 }
             } catch (error) {
                 console.error("Error polling appointments:", error);
+                pollDelay = Math.min(pollDelay * 1.5, 60000);
+            } finally {
+                timeoutId = setTimeout(poll, pollDelay);
             }
-        }, 10000); // Check every 10 seconds
+        };
 
-        return () => clearInterval(interval);
+        timeoutId = setTimeout(poll, pollDelay);
+
+        return () => clearTimeout(timeoutId);
     }, [lastChecked]);
 
     return <Toaster />;
