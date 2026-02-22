@@ -161,7 +161,9 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
     const yearsRaw = formData.get("years_of_experience");
     const years_of_experience = (yearsRaw && yearsRaw !== "") ? parseInt(yearsRaw as string, 10) : currentDoctor.years_of_experience;
     const Maps_url = (formData.get("Maps_url") as string) || currentDoctor.Maps_url;
+    // This value is now a Supabase public URL provided by the frontend after a successful upload
     const profile_image_path = (formData.get("profile_image_path") as string) || currentDoctor.profile_image_path;
+
 
     // Clinic Fields
     const name = (formData.get("clinic_name") as string) || currentDoctor.name;
