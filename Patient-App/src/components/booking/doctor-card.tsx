@@ -1,10 +1,15 @@
 "use client"
-import { memo } from "react"
+import React, { memo } from "react"
+
 import { DoctorData } from "@/lib/shared-logic/types"
 import { Bone } from "lucide-react"
 import Image from "next/image"
 
+
 const DoctorCard = memo(function DoctorCard({ doctor }: { doctor: DoctorData }) {
+    const [imgSrc, setImgSrc] = React.useState(doctor.image);
+    const fallback = "/doctors/profile.jpg";
+
     return (
         <div className="relative w-full max-w-[340px] min-h-[480px] rounded-[48px] p-6 flex flex-col items-center justify-between overflow-hidden group shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] transition-all hover:scale-[1.01] duration-500 border border-slate-800/50">
             {/* Card Background & Effects */}
@@ -30,18 +35,18 @@ const DoctorCard = memo(function DoctorCard({ doctor }: { doctor: DoctorData }) 
                     <div className="absolute inset-0 rounded-full border border-white/5 pointer-events-none z-30" />
                     <div className="w-full h-full rounded-full overflow-hidden border-[6px] border-[#0f172a] relative z-20 bg-[#0f172a]">
                         <Image
-                            src={doctor.image}
+                            src={imgSrc}
                             alt={doctor.nameAr}
                             fill
                             sizes="(max-width: 768px) 100vw, 224px"
                             className="object-cover object-top hover:scale-110 transition-transform duration-700 filter brightness-110 contrast-110"
                             priority
-                            placeholder="blur"
-                            blurDataURL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdib3g9IjAgMCA0MDAgNDAwIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImciIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9InBhZGRpbmctYm90dG9tIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMWUyOTNiIi8+PHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSIjMGYxNzJhIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHJlY3Qgd2lkdGg9IjQwMCIgaGVpZ2h0PSI0MDAiIGZpbGw9InVybCgjZykiLz48Y2lyY2xlIGN4PSIyMDAiIGN5PSIxNzAiIHI9IjYwIiBmaWxsPSIjMzMzNDU2Ii8+PHBhdGggZD0iTTEwMCAzNTBRMTAwIDI3MCAyMDAgMjcwUTMwMCAyNzAgMzAwIDM1MCIgc3Ryb2tlPSIjMzMzNDU2IiBzdHJva2Utd2lkdGg9IjQwIiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4="
+                            onError={() => setImgSrc(fallback)}
                         />
                     </div>
                 </div>
             </div>
+
 
             {/* Card Internal Info (Bottom Floating) */}
             <div className="relative z-20 w-full mt-auto pb-1">

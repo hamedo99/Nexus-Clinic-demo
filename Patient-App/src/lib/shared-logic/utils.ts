@@ -13,12 +13,18 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function resolveMediaPath(path: string | null | undefined): string {
     const fallback = "/doctors/profile.jpg";
-    if (!path || path === "/doctor-placeholder.png") return fallback;
+    const placeholder = "/doctor-placeholder.svg";
 
-    // If the path is already a full URL (like Supabase public URLs), return it as-is!
+    if (!path || path === "" || path === placeholder || path === "/doctor-placeholder.png") {
+        return fallback;
+    }
+
+    // Strictly check for absolute URLs (Supabase, external, etc.)
+    // If it starts with http or https, we MUST return it exactly as-is.
     if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:")) {
         return path;
     }
+
 
     // Determine Base URL: 
     // 1. NEXT_PUBLIC_BASE_URL (Preferred for production/custom)
