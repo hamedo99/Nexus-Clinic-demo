@@ -23,7 +23,7 @@ export const BookingClient = memo(function BookingClient({ doctor, config }: { d
                 </div>
 
                 {/* Booking Wizard - Contains complex logic & state */}
-                <BookingForm config={config} doctorId={doctor.id} />
+                <BookingForm config={config} doctorId={doctor.id} doctorName={doctor.nameAr} />
 
             </div>
         </div>

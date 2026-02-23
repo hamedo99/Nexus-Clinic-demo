@@ -29,7 +29,7 @@ interface AvailabilityData {
     exactBookedSlots: Record<string, string[]>;
 }
 
-export default function BookingForm({ config, doctorId }: { config?: BookingConfig, doctorId?: string }) {
+export default function BookingForm({ config, doctorId, doctorName }: { config?: BookingConfig, doctorId?: string, doctorName?: string }) {
     // Prevent Hydration Errors on Vercel
     const [isMounted, setIsMounted] = React.useState(false)
 
@@ -424,22 +424,89 @@ export default function BookingForm({ config, doctorId }: { config?: BookingConf
 
                     {step === 4 && (
                         <div className="max-w-md mx-auto animate-in fade-in zoom-in duration-500 relative perspective-1000">
-                            <Card className="glass-effect border-0 p-8 md:p-12 rounded-[40px] text-center space-y-8 bg-slate-900/80 backdrop-blur-xl shadow-[0_0_100px_rgba(8,145,178,0.2)] ring-1 ring-white/10 relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-green-500 via-cyan-500 to-blue-500" />
-                                <div className="absolute -top-20 -right-20 w-64 h-64 bg-green-500/10 blur-[80px] rounded-full pointer-events-none" />
-                                <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-cyan-500/10 blur-[80px] rounded-full pointer-events-none" />
-                                <div className="relative">
-                                    <div className="w-24 h-24 bg-gradient-to-tr from-green-400 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-500/30 animate-in zoom-in-50 duration-700 delay-150"><Check className="w-12 h-12 text-white drop-shadow-md" /></div>
-                                    <div className="absolute inset-0 bg-green-400/20 rounded-full animate-ping opacity-20 delay-1000 duration-1000" />
+                            <Card className="glass-effect border-0 p-8 md:p-10 rounded-[40px] text-center space-y-6 bg-slate-900/90 backdrop-blur-xl shadow-[0_0_100px_rgba(8,145,178,0.2)] ring-1 ring-white/10 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500" />
+
+                                <div className="relative pt-2">
+                                    <div className="w-20 h-20 bg-gradient-to-tr from-emerald-400 to-cyan-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20 animate-in zoom-in-50 duration-700 delay-150">
+                                        <Check className="w-10 h-10 text-white drop-shadow-md" />
+                                    </div>
+                                    <div className="absolute inset-0 bg-emerald-400/10 rounded-full animate-ping opacity-10 duration-1000" />
                                 </div>
-                                <div className="space-y-2"><h3 className="text-3xl md:text-4xl font-black text-white tracking-tight">تم الحجز بنجاح!</h3><p className="text-slate-400 text-lg font-medium">شكراً لك، {formData.name}</p></div>
-                                <div className="py-2"><p className="text-slate-500 text-sm">تم تأكيد موعدك في <span className="text-cyan-400 font-bold mx-1">{date && format(date, 'yyyy-MM-dd')}</span> الساعة <span className="text-cyan-400 font-bold mx-1">{selectedTime}</span></p></div>
-                                <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700/50 flex items-center justify-between gap-4 text-right mb-2">
-                                    <div className="flex items-center gap-4"><div className="w-12 h-12 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 shrink-0 shadow-[0_0_10px_rgba(6,182,212,0.1)] border border-cyan-500/20"><Camera className="w-6 h-6 animate-pulse" /></div><div><p className="text-white font-bold text-sm mb-1">يرجى التقاط صورة للشاشة</p><p className="text-slate-400 text-xs text-right">لضمان حقك عند المراجعة</p></div></div>
+
+                                <div className="space-y-1">
+                                    <h3 className="text-2xl md:text-3xl font-black text-white tracking-tight">تم الحجز بنجاح!</h3>
+                                    <p className="text-emerald-400 font-bold">موعدك الآن مؤكد في العيادة</p>
                                 </div>
-                                <div className="space-y-3 pt-4">
-                                    <Button className="w-full h-14 text-lg font-bold bg-[#25D366] hover:bg-[#128C7E] text-white rounded-2xl shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95" onClick={() => { const text = `مرحباً، لقد قمت بحجز موعد باسم ${formData.name} في تاريخ ${date && format(date, 'yyyy-MM-dd')} الساعة ${selectedTime}.`; window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank'); }}><Share2 className="w-5 h-5" />مشاركة عبر واتساب</Button>
-                                    <Button variant="outline" className="w-full h-14 text-lg font-bold border-slate-700 hover:bg-slate-800 text-slate-300 hover:text-white rounded-2xl transition-all" onClick={() => router.push('/')}>العودة للرئيسية</Button>
+
+                                {/* Appointment Ticket UI */}
+                                <div className="bg-slate-950/50 rounded-3xl border border-slate-800/80 overflow-hidden text-right shadow-inner">
+                                    <div className="p-5 space-y-4">
+                                        <div className="flex justify-between items-center border-b border-slate-800/50 pb-3">
+                                            <span className="text-white font-bold">{formData.name}</span>
+                                            <span className="text-slate-500 text-xs flex items-center gap-2">المريض <User className="w-3.5 h-3.5" /></span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-slate-800/50 pb-3">
+                                            <span className="text-cyan-400 font-bold">{doctorName || "عيادة نكسس الكبرى"}</span>
+                                            <span className="text-slate-500 text-xs flex items-center gap-2">الطبيب <User className="w-3.5 h-3.5 text-cyan-500" /></span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 border-b border-slate-800/50 pb-3">
+                                            <div className="text-right">
+                                                <span className="text-slate-500 text-[10px] flex items-center gap-1 justify-end mb-1">الوقت <Clock className="w-3 h-3" /></span>
+                                                <span className="text-white font-mono font-bold text-sm bg-slate-800 px-2 py-0.5 rounded">{selectedTime}</span>
+                                            </div>
+                                            <div className="text-right">
+                                                <span className="text-slate-500 text-[10px] flex items-center gap-1 justify-end mb-1">التاريخ <CalendarIcon className="w-3 h-3" /></span>
+                                                <span className="text-white font-mono font-bold text-sm">{date && format(date, 'yyyy-MM-dd')}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center border-b border-slate-800/50 pb-3">
+                                            <span className="text-white font-mono font-bold text-sm">{formData.phone}</span>
+                                            <span className="text-slate-500 text-xs flex items-center gap-2">رقم الهاتف <Phone className="w-3.5 h-3.5" /></span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-white font-bold text-sm">{paymentMethod === "cash" ? "نقداً في العيادة" : "زين كاش"}</span>
+                                            <span className="text-slate-500 text-xs flex items-center gap-2">طريقة الدفع <Wallet className="w-3.5 h-3.5" /></span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-cyan-500/5 p-3 text-center border-t border-slate-800/50">
+                                        <p className="text-cyan-400 text-xs font-bold italic tracking-wider">NEXUS CLINIC - DIGITAL TICKET</p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-amber-500/5 p-4 rounded-2xl border border-amber-500/10 flex items-center justify-between gap-4 text-right">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 shrink-0 border border-amber-500/20">
+                                            <Camera className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-bold text-xs mb-0.5">يرجى التقاط صورة للشاشة</p>
+                                            <p className="text-slate-500 text-[10px]">لإظهار التذكرة عند مراجعة العيادة</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <Button
+                                        className="w-full h-14 text-lg font-bold bg-[#128C7E] hover:bg-[#075E54] text-white rounded-2xl shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-95"
+                                        onClick={() => {
+                                            const text = `*تأكيد حجز موعد - عيادة نكسس*\n\n` +
+                                                `👤 *المريض:* ${formData.name}\n` +
+                                                `👨‍⚕️ *الطبيب:* ${doctorName || "المناوب"}\n` +
+                                                `📅 *التاريخ:* ${date && format(date, 'yyyy-MM-dd')}\n` +
+                                                `⏰ *الوقت:* ${selectedTime}\n` +
+                                                `📞 *الهاتف:* ${formData.phone}\n` +
+                                                `💳 *طريقة الدفع:* ${paymentMethod === "cash" ? "نقداً في العيادة" : "إلكتروني"}\n\n` +
+                                                `_يرجى الحضور قبل الموعد بـ 10 دقائق._`;
+                                            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+                                        }}
+                                    >
+                                        <Share2 className="w-5 h-5" />
+                                        مشاركة عبر واتساب
+                                    </Button>
+                                    <Button variant="ghost" className="w-full h-12 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all" onClick={() => router.push('/')}>
+                                        العودة للرئيسية
+                                    </Button>
                                 </div>
                             </Card>
                         </div>
