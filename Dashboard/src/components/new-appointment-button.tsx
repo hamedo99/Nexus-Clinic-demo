@@ -48,13 +48,13 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
     const currentDoctor = allDoctors.find(d => d.id === (role === "ADMIN" ? selectedDoctorId : doctorId));
     const workingHours = (currentDoctor?.workingHours as any) || { start: 14, end: 21 };
 
-    // Generate valid hours based on working hours
+    // Generate valid hours based on working hours (FORCE 10 AM - 12 AM)
     const validHours = Array.from(
-        { length: workingHours.end - workingHours.start },
-        (_, i) => workingHours.start + i
+        { length: 24 - 10 + 1 }, // Include 12 AM? Let's check. 10 to 24 is 15 values if including 24.
+        (_, i) => 10 + i
     );
 
-    const [hour, setHour] = useState(validHours[0]?.toString() || "14");
+    const [hour, setHour] = useState(validHours[0]?.toString() || "10");
     const [minute, setMinute] = useState("00");
 
     const time = `${hour.padStart(2, '0')}:${minute}`;
@@ -192,9 +192,9 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
                         <Label htmlFor="time" className="text-right">
                             الوقت
                         </Label>
-                        <div className="col-span-3 flex gap-2">
+                        <div className="col-span-3">
                             <Select value={hour} onValueChange={setHour}>
-                                <SelectTrigger className="flex-1">
+                                <SelectTrigger className="w-full">
                                     <SelectValue placeholder="ساعة" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -205,29 +205,16 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
                                     ))}
                                 </SelectContent>
                             </Select>
-
-                            <Select value={minute} onValueChange={setMinute}>
-                                <SelectTrigger className="flex-1">
-                                    <SelectValue placeholder="دقيقة" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {["00", "20", "40"].map(m => (
-                                        <SelectItem key={m} value={m}>
-                                            {m}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
                         </div>
                     </div>
-                    <div className="flex justify-center mt-2">
-                        <Calendar
-                            mode="single"
-                            selected={date}
-                            onSelect={setDate}
-                            className="rounded-md border shadow"
-                        />
-                    </div>
+                </div>
+                <div className="flex justify-center mt-2">
+                    <Calendar
+                        mode="single"
+                        selected={date}
+                        onSelect={setDate}
+                        className="rounded-md border shadow"
+                    />
                 </div>
                 <DialogFooter className="flex-row-reverse gap-2">
                     <Button type="submit" onClick={handleCreate} disabled={loading} className="w-full">
@@ -235,6 +222,6 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
                     </Button>
                 </DialogFooter>
             </DialogContent>
-        </Dialog>
+        </Dialog >
     );
 }

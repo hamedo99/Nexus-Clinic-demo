@@ -14,7 +14,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { ChevronLeft, ChevronRight, Clock, Calendar as CalendarIcon, User, Phone, Check, Wallet, CreditCard, Camera, Share2, AlertCircle } from "lucide-react"
+import { ChevronLeft, ChevronRight, Clock, Calendar as CalendarIcon, User, Phone, Check, Wallet, CreditCard, Camera, Share2, AlertCircle, Building2, Loader2, MapPin } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format, isSameDay } from "date-fns"
 import { arSA } from "date-fns/locale"
@@ -27,6 +27,10 @@ interface AvailabilityData {
     fullyBookedDates: string[];
     fullSlots: Record<string, number[]>;
     exactBookedSlots: Record<string, string[]>;
+    disabledDaysOfWeek: number[];
+    locations: string[];
+    schedule: any[];
+    clinic_locations: any[];
 }
 
 export default function BookingForm({ config, doctorId, doctorName }: { config?: BookingConfig, doctorId?: string, doctorName?: string }) {
@@ -38,10 +42,11 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
     const [selectedTime, setSelectedTime] = React.useState<string | null>(null)
     const [currentMonth, setCurrentMonth] = React.useState<Date | undefined>(undefined) // initialized in useEffect later
     const [step, setStep] = React.useState(1)
+    const [selectedLocation, setSelectedLocation] = React.useState<string | null>(null)
     const [isSubmitting, setIsSubmitting] = React.useState(false)
     const [errorState, setErrorState] = React.useState<{ isOpen: boolean, message: string }>({ isOpen: false, message: "" })
     const [paymentMethod, setPaymentMethod] = React.useState<"cash" | "zain">("cash")
-    const [availability, setAvailability] = React.useState<AvailabilityData>({ blockedPeriods: [], fullyBookedDates: [], fullSlots: {}, exactBookedSlots: {} })
+    const [availability, setAvailability] = React.useState<AvailabilityData>({ blockedPeriods: [], fullyBookedDates: [], fullSlots: {}, exactBookedSlots: {}, disabledDaysOfWeek: [5], locations: [], schedule: [], clinic_locations: [] })
     const [isLoadingAvailability, setIsLoadingAvailability] = React.useState(false)
     const router = useRouter()
 
@@ -75,10 +80,10 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
 
     // Default config if not provided
     const defaultConfig = {
-        workingHours: { start: 14, end: 21 }, // 2 PM - 9 PM
-        patientsPerHour: 4,
+        workingHours: { start: 10, end: 24 }, // 10 AM - 12 AM
+        patientsPerHour: 1,
         consultationPrice: 25000,
-        slotDuration: 20
+        slotDuration: 60
     };
 
     const activeConfig = config || defaultConfig;
@@ -92,7 +97,16 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                 const year = currentMonth.getFullYear();
                 const month = currentMonth.getMonth() + 1; // getMonth is 0-indexed
                 const data = await getMonthAvailability(year, month, doctorId);
-                setAvailability(data);
+                setAvailability({
+                    blockedPeriods: data.blockedPeriods || [],
+                    fullyBookedDates: data.fullyBookedDates || [],
+                    fullSlots: data.fullSlots || {},
+                    exactBookedSlots: data.exactBookedSlots || {},
+                    disabledDaysOfWeek: data.disabledDaysOfWeek || [5],
+                    locations: data.locations || [],
+                    schedule: data.schedule || [],
+                    clinic_locations: data.clinic_locations || []
+                });
             } catch (error) {
                 console.error("Failed to fetch availability", error);
             } finally {
@@ -116,6 +130,17 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
         // Check if fully booked
         if (availability.fullyBookedDates.includes(dayStr)) return true;
 
+        // Structural Weekly Day-Off check
+        if (availability.disabledDaysOfWeek.includes(day.getDay())) return true;
+
+        // NEW: Check if doctor works at this location on this day
+        if (selectedLocation) {
+            const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+            const selectedDayName = dayNames[day.getDay()];
+            const hasLocationThisDay = availability.schedule.some(s => s.location === selectedLocation && s.day === selectedDayName);
+            if (!hasLocationThisDay) return true;
+        }
+
         // Check if blocked
         for (const period of availability.blockedPeriods) {
             const start = new Date(period.start);
@@ -129,66 +154,78 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
         return false;
     }, [availability]);
 
-    // Dynamically generate time slots based on working hours and slot duration
+    // Dynamically generate time slots based on location schedule
     const timeSlots = React.useMemo(() => {
-        if (!date) return [];
+        if (!date || !selectedLocation) return [];
 
-        const slots = [];
-        const startHour = activeConfig.workingHours.start;
-        const endHour = activeConfig.workingHours.end;
-        const duration = activeConfig.slotDuration || 20;
-
-        let currentTime = new Date(date);
-        currentTime.setHours(startHour, 0, 0, 0);
-
-        const endTime = new Date(date);
-        endTime.setHours(endHour, 0, 0, 0);
-
+        const slots: { time: string, disabled: boolean, isFull: boolean, isPast: boolean, isBooked: boolean }[] = [];
         const dayStr = format(date, "yyyy-MM-dd");
         const fullHours = availability.fullSlots[dayStr] || [];
         const exactBooked = availability.exactBookedSlots?.[dayStr] || [];
 
-        // Check if today
+        const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+        const selectedDayName = dayNames[date.getDay()];
+
+        // Find all schedule ranges for this specific location today
+        const ranges = availability.schedule.filter(s => s.location === selectedLocation && s.day === selectedDayName);
+
+        if (ranges.length === 0) return [];
+
         const now = new Date();
         const isToday = isSameDay(date, now);
+        const duration = 60; // Hourly force
 
-        while (currentTime < endTime) {
-            const h = currentTime.getHours();
-            const m = currentTime.getMinutes();
+        ranges.forEach(range => {
+            const startH = parseInt(range.startTime.split(':')[0]);
+            const endH = parseInt(range.endTime.split(':')[0]);
 
-            const slotTimeStr24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-            const isSlotExactBooked = exactBooked.includes(slotTimeStr24);
+            let currentTime = new Date(date);
+            currentTime.setHours(startH, 0, 0, 0);
 
-            // Check if this specific slot "block" (hour) is full
-            // Note: Our backend returns "full hours" based on patientsPerHour.
-            // If we want finer granularity (slot-based blocking), backend needs update to return full SLOTS not HOURS.
-            // Currently, if an hour is in 'fullSlots', we disable all slots in that hour.
-            const isHourFull = fullHours.includes(h);
+            const rangeEndTime = new Date(date);
+            rangeEndTime.setHours(endH, 0, 0, 0);
 
-            // Check if slot is in the past (only for today)
-            const isPast = isToday && currentTime < now;
+            while (currentTime < rangeEndTime) {
+                const h = currentTime.getHours();
+                const m = currentTime.getMinutes();
 
-            const hour12 = h > 12 ? h - 12 : (h === 0 || h === 24 ? 12 : h);
-            const ampm = h >= 12 && h < 24 ? "PM" : "AM";
+                const slotTimeStr24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                const isSlotExactBooked = exactBooked.includes(slotTimeStr24);
+                const isHourFull = fullHours.includes(h);
+                const isPast = isToday && currentTime < now;
 
-            const timeString = `${String(hour12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+                const hour12 = h > 12 ? h - 12 : (h === 0 || h === 24 ? 12 : h);
+                const ampm = h >= 12 && h < 24 ? "PM" : "AM";
+                const timeString = `${String(hour12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
 
-            slots.push({
-                time: timeString,
-                disabled: isHourFull || isPast || isSlotExactBooked,
-                isFull: isHourFull,
-                isPast: isPast,
-                isBooked: isSlotExactBooked
-            });
+                // Avoid duplicates if ranges overlap (though they shouldn't)
+                if (!slots.some(s => s.time === timeString)) {
+                    slots.push({
+                        time: timeString,
+                        disabled: isHourFull || isPast || isSlotExactBooked,
+                        isFull: isHourFull,
+                        isPast: isPast,
+                        isBooked: isSlotExactBooked
+                    });
+                }
+                currentTime.setMinutes(currentTime.getMinutes() + duration);
+            }
+        });
 
-            // Increment by slot duration
-            currentTime.setMinutes(currentTime.getMinutes() + duration);
-        }
+        return slots.sort((a, b) => {
+            // Helper to sort "02:00 PM" vs "10:00 AM"
+            const parse = (t: string) => {
+                const [h_m, p] = t.split(' ');
+                let [h, m] = h_m.split(':').map(Number);
+                if (p === 'PM' && h < 12) h += 12;
+                if (p === 'AM' && h === 12) h = 0;
+                return h * 60 + m;
+            };
+            return parse(a.time) - parse(b.time);
+        });
+    }, [date, availability, selectedLocation]);
 
-        return slots;
-    }, [activeConfig, date, availability]);
-
-    const steps = [1, 2, 3, 4]
+    const steps = [1, 2, 3, 4, 5, 6]
 
     // Handlers
     const handlePrevMonth = React.useCallback(() => {
@@ -224,15 +261,19 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
     }, [formData]);
 
     const handleNext = React.useCallback(async () => {
-        if (step === 1 && date && selectedTime) {
+        if (step === 1 && date) {
             setStep(2)
-        } else if (step === 2 && validateStep2()) {
+        } else if (step === 2 && selectedLocation) {
+            setStep(3)
+        } else if (step === 3 && selectedTime) {
+            setStep(4)
+        } else if (step === 4 && validateStep2()) {
             if (!selectedTime || !date) {
                 setErrorState({ isOpen: true, message: "يرجى اختيار الموعد أولاً" })
                 return
             }
-            setStep(3)
-        } else if (step === 3) {
+            setStep(5)
+        } else if (step === 5) {
             setIsSubmitting(true)
             try {
                 const formatTimeForServer = (timeStr: string) => {
@@ -249,13 +290,14 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                 if (formData.website_url) formDataToSend.append("website_url", formData.website_url);
                 formDataToSend.append("date", format(date!, "yyyy-MM-dd"));
                 formDataToSend.append("time", formatTimeForServer(selectedTime!));
+                if (selectedLocation) formDataToSend.append("location", selectedLocation);
                 if (doctorId) {
                     formDataToSend.append("doctorId", doctorId);
                 }
 
                 const result = await createBooking(null, formDataToSend)
                 if (result.success) {
-                    setStep(4)
+                    setStep(6)
                     triggerConfetti()
                 } else {
                     setErrorState({ isOpen: true, message: result.message || "حدث خطأ ما" })
@@ -267,7 +309,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                 setIsSubmitting(false)
             }
         }
-    }, [step, date, selectedTime, formData, doctorId, validateStep2, triggerConfetti]);
+    }, [step, date, selectedTime, formData, doctorId, validateStep2, triggerConfetti, selectedLocation]);
 
     const handleBack = React.useCallback(() => {
         if (step > 1) setStep(step - 1)
@@ -277,6 +319,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
         setStep(1);
         setDate(new Date());
         setSelectedTime(null);
+        setSelectedLocation(null);
         setFormData({ name: "", phone: "", website_url: "" });
     }, []);
 
@@ -305,61 +348,153 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
 
                 {/* Content Area */}
                 <div className="min-h-[400px] relative">
+                    {/* Step 1: Date Selection */}
                     {step === 1 && (
-                        <div className="animate-in fade-in slide-in-from-bottom-8 duration-500 w-full space-y-6">
-                            {/* Legend UI */}
-                            <div className="flex flex-row justify-center items-center gap-4 text-xs text-slate-400 bg-slate-900/40 border border-slate-800/60 p-3 rounded-2xl w-fit mx-auto backdrop-blur-md" dir="rtl">
-                                <div className="flex items-center gap-1.5">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-slate-800/60 border border-slate-700 shrink-0"></div>
-                                    <span>الرمادي: أيام سابقة أو أوقات غير متاحة</span>
-                                </div>
+                        <div className="animate-in fade-in slide-in-from-left-8 duration-500 w-full space-y-6 max-w-2xl mx-auto">
+                            <div className="text-center space-y-2 mb-8">
+                                <span className="text-cyan-400 text-sm font-bold uppercase tracking-widest">{doctorName || "عيادة نكسس الكبرى"}</span>
+                                <h3 className="text-3xl font-black text-white">اختر تاريخ الموعد</h3>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 dir-rtl">
-                                <Card className="glass-effect border-0 p-6 md:p-8 rounded-[32px] overflow-hidden flex flex-col items-center relative order-1 lg:order-2 bg-slate-900/40 backdrop-blur-md shadow-xl ring-1 ring-white/5">
-                                    <div className="w-full flex justify-between items-center mb-6 px-2 ltr-force-header" dir="ltr">
-                                        <div className="flex gap-2">
-                                            <Button variant="ghost" size="icon" onClick={handlePrevMonth} className="h-8 w-8 hover:bg-slate-800 text-slate-400 hover:text-white rounded-full transition-colors"><ChevronLeft className="w-5 h-5" /></Button>
-                                            <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8 hover:bg-slate-800 text-slate-400 hover:text-white rounded-full transition-colors"><ChevronRight className="w-5 h-5" /></Button>
-                                            {isLoadingAvailability && <div className="animate-spin text-cyan-500 ml-2"><Clock className="w-4 h-4" /></div>}
-                                        </div>
-                                        <h3 className="text-lg font-bold text-slate-200 capitalize w-full text-right pr-4 tracking-wide">{currentMonth ? format(currentMonth, 'MMMM yyyy', { locale: arSA }) : ''}</h3>
+                            <Card className="glass-effect border-0 p-6 md:p-8 rounded-[32px] overflow-hidden flex flex-col items-center relative bg-slate-900/40 backdrop-blur-md shadow-xl ring-1 ring-white/5">
+                                <div className="w-full flex justify-between items-center mb-6 px-2 ltr-force-header" dir="ltr">
+                                    <div className="flex gap-2">
+                                        <Button variant="ghost" size="icon" onClick={handlePrevMonth} className="h-8 w-8 hover:bg-slate-800 text-slate-400 hover:text-white rounded-full transition-colors"><ChevronLeft className="w-5 h-5" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={handleNextMonth} className="h-8 w-8 hover:bg-slate-800 text-slate-400 hover:text-white rounded-full transition-colors"><ChevronRight className="w-5 h-5" /></Button>
+                                        {isLoadingAvailability && <div className="animate-spin text-cyan-500 ml-2"><Clock className="w-4 h-4" /></div>}
                                     </div>
-                                    <Calendar mode="single" selected={date} onSelect={setDate} month={currentMonth || new Date()} onMonthChange={setCurrentMonth} locale={arSA} className="p-0 pointer-events-auto rounded-md border-0 w-full calendar-ltr font-sans"
-                                        disabled={isDateDisabled}
-                                        classNames={{ months: "w-full", month: "space-y-4 w-full", caption: "hidden", table: "w-full border-collapse space-y-2", weekdays: "flex justify-between w-full mb-4 px-2", weekday: "text-slate-500 rounded-md w-10 font-bold text-[0.75rem] uppercase tracking-wider", week: "flex w-full mt-2 justify-between px-2", day: "h-9 w-9 p-0 font-medium text-slate-400 aria-selected:opacity-100 hover:text-white hover:bg-slate-800 rounded-full transition-all flex items-center justify-center relative", selected: "bg-cyan-600 text-white hover:bg-cyan-600 hover:text-white shadow-lg shadow-cyan-900/50 font-bold scale-110 z-10", today: "text-cyan-400 font-bold relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-cyan-400 after:rounded-full", outside: "text-slate-800 opacity-20", disabled: "text-slate-500 bg-slate-800/40 opacity-50 selection:bg-transparent hover:bg-transparent cursor-not-allowed", hidden: "invisible" }}
-                                    />
-                                </Card>
-                                <Card className="glass-effect border-0 p-6 md:p-8 rounded-[32px] flex flex-col min-h-[400px] order-2 lg:order-1 relative overflow-hidden bg-slate-900/40 backdrop-blur-md shadow-xl ring-1 ring-white/5">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 blur-[60px] rounded-full pointer-events-none" />
-                                    <div className="flex items-center gap-3 mb-6 relative z-10 text-right w-full justify-start" dir="rtl">
-                                        <div className="w-8 h-8 rounded-full bg-cyan-900/30 flex items-center justify-center text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(8,145,178,0.2)]"><Clock className="w-4 h-4" /></div>
-                                        <h3 className="text-xl font-bold text-slate-200">الأوقات المتاحة</h3>
+                                    <h3 className="text-lg font-bold text-slate-200 capitalize w-full text-right pr-4 tracking-wide">{currentMonth ? format(currentMonth, 'MMMM yyyy', { locale: arSA }) : ''}</h3>
+                                </div>
+                                <Calendar mode="single" selected={date} onSelect={(d) => { setDate(d); if (d) setStep(2); }} month={currentMonth || new Date()} onMonthChange={setCurrentMonth} locale={arSA} className="p-0 pointer-events-auto rounded-md border-0 w-full calendar-ltr font-sans"
+                                    disabled={isDateDisabled}
+                                    classNames={{ months: "w-full", month: "space-y-4 w-full", caption: "hidden", table: "w-full border-collapse space-y-2", weekdays: "flex justify-between w-full mb-4 px-2", weekday: "text-slate-500 rounded-md w-10 font-bold text-[0.75rem] uppercase tracking-wider", week: "flex w-full mt-2 justify-between px-2", day: "h-11 w-11 p-0 font-medium text-slate-400 aria-selected:opacity-100 hover:text-white hover:bg-slate-800 rounded-full transition-all flex items-center justify-center relative", selected: "bg-cyan-600 text-white hover:bg-cyan-600 hover:text-white shadow-lg shadow-cyan-900/50 font-bold scale-110 z-10", today: "text-cyan-400 font-bold relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-cyan-400 after:rounded-full", outside: "text-slate-800 opacity-20", disabled: "text-slate-500 bg-slate-800/40 opacity-50 selection:bg-transparent hover:bg-transparent cursor-not-allowed", hidden: "invisible" }}
+                                />
+                            </Card>
+                        </div>
+                    )}
+
+                    {/* Step 2: Location Selection */}
+                    {step === 2 && (
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-500 w-full">
+                            <div className="text-center space-y-2 mb-10">
+                                <span className="text-cyan-400 text-sm font-bold uppercase tracking-widest">{date && format(date, 'EEEE, d MMMM', { locale: arSA })}</span>
+                                <h3 className="text-3xl font-black text-white">اختر موقع العيادة</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto pb-10">
+                                {(() => {
+                                    const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+                                    const selectedDayName = dayNames[date?.getDay() || 0];
+                                    const availableLocNames = Array.from(new Set(availability.schedule.filter(s => s.day === selectedDayName).map(s => s.location)));
+
+                                    return availableLocNames.map((loc) => {
+                                        const locDetails = availability.clinic_locations?.find(l => l.name === loc);
+                                        return (
+                                            <button
+                                                key={loc as string}
+                                                onClick={() => {
+                                                    setSelectedLocation(loc as string);
+                                                    setStep(3);
+                                                }}
+                                                className={cn(
+                                                    "group relative p-6 rounded-[32px] border-2 transition-all duration-500 text-right overflow-hidden flex flex-col gap-4",
+                                                    selectedLocation === loc
+                                                        ? "bg-cyan-600 border-cyan-400 shadow-[0_20px_40px_-15px_rgba(8,145,178,0.4)] scale-[1.02]"
+                                                        : "bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-800/60 hover:scale-[1.01]"
+                                                )}
+                                            >
+                                                <div className="relative z-10 flex items-center justify-between">
+                                                    <div className={cn(
+                                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors duration-500 shrink-0",
+                                                        selectedLocation === loc ? "bg-white/20 text-white" : "bg-cyan-900/30 text-cyan-400"
+                                                    )}>
+                                                        <Building2 className="w-6 h-6" />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <h4 className={cn("text-xl font-black", selectedLocation === loc ? "text-white" : "text-slate-200")}>{loc as string}</h4>
+                                                        <p className={cn("text-xs font-medium", selectedLocation === loc ? "text-white/70" : "text-slate-500")}>الموقع متاح في هذا اليوم</p>
+                                                    </div>
+                                                </div>
+
+                                                {(locDetails?.address || locDetails?.phone) && (
+                                                    <div className={cn("relative z-10 pt-4 border-t", selectedLocation === loc ? "border-white/10" : "border-slate-800")}>
+                                                        {locDetails.address && (
+                                                            <div className="flex items-center gap-2 justify-end text-sm mb-1">
+                                                                <span className={cn(selectedLocation === loc ? "text-white/90" : "text-slate-400")}>{locDetails.address}</span>
+                                                                <MapPin className={cn("w-4 h-4", selectedLocation === loc ? "text-white/70" : "text-slate-500")} />
+                                                            </div>
+                                                        )}
+                                                        {locDetails.phone && (
+                                                            <div className="flex items-center gap-2 justify-end text-sm">
+                                                                <span className={cn(selectedLocation === loc ? "text-white/90" : "text-slate-400")}>{locDetails.phone}</span>
+                                                                <Phone className={cn("w-4 h-4", selectedLocation === loc ? "text-white/70" : "text-slate-500")} />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {selectedLocation === loc && (
+                                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-white/30" />
+                                                )}
+                                            </button>
+                                        );
+                                    });
+                                })()}
+                                {availability.schedule.length === 0 && !isLoadingAvailability && (
+                                    <div className="col-span-full py-20 text-center">
+                                        <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4" />
+                                        <p className="text-slate-400">لا توجد مواقع عمل مسجلة لهذا اليوم</p>
                                     </div>
-                                    {!date ? (
-                                        <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-4 opacity-50 relative z-10 animate-pulse"><CalendarIcon className="w-12 h-12 stroke-[1.5]" /><p>الرجاء اختيار يوم أولاً</p></div>
-                                    ) : (
-                                        <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto max-h-[300px] pr-2 custom-scrollbar relative z-10" dir="ltr">
-                                            {timeSlots.map(({ time, disabled, isFull, isBooked }) => (
-                                                <button key={time} onClick={() => !disabled && setSelectedTime(time)} disabled={disabled} className={cn("min-h-[50px] w-full px-2 rounded-xl text-center text-sm md:text-base font-bold transition-all duration-300 border relative overflow-hidden group flex items-center justify-center",
-                                                    disabled ?
-                                                        "opacity-40 cursor-not-allowed bg-slate-800/40 border-slate-700/50 text-slate-500 line-through decoration-slate-600"
-                                                        :
-                                                        selectedTime === time ? "bg-cyan-600 border-cyan-500 text-white shadow-lg shadow-cyan-900/30 scale-[1.05]" : "bg-slate-800/40 border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:border-slate-500 hover:text-slate-200 hover:shadow-md")}>
-                                                    <span className="relative z-10 font-sans tracking-widest block translate-y-[1px] md:translate-y-0 leading-none">{time}</span>
-                                                    {selectedTime === time && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-[200%] translate-x-[-100%] animate-shimmer" />}
-                                                    {disabled && <div className="absolute inset-0 flex items-center justify-center"><div className="w-[120%] h-[1px] bg-red-900/30 rotate-12" /></div>}
-                                                </button>
-                                            ))}
-                                            {timeSlots.length === 0 && <div className="col-span-full text-center text-slate-500 py-10">لا توجد أوقات متاحة لهذا اليوم</div>}
-                                        </div>
-                                    )}
-                                </Card>
+                                )}
                             </div>
                         </div>
                     )}
 
-                    {step === 2 && (
+                    {step === 3 && (
+                        <div className="animate-in fade-in slide-in-from-bottom-8 duration-500 w-full space-y-6 max-w-3xl mx-auto">
+                            <div className="text-center space-y-2 mb-8">
+                                <div className="flex items-center justify-center gap-2 text-cyan-400 text-sm font-bold uppercase tracking-widest">
+                                    <span>{selectedLocation}</span>
+                                    <span>•</span>
+                                    <span>{date && format(date, 'EEEE, d MMMM', { locale: arSA })}</span>
+                                </div>
+                                <h3 className="text-3xl font-black text-white">متى تفضل الحضور؟</h3>
+                            </div>
+
+                            <Card className="glass-effect border-0 p-8 rounded-[32px] flex flex-col min-h-[400px] relative overflow-hidden bg-slate-900/40 backdrop-blur-md shadow-xl ring-1 ring-white/5">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 blur-[60px] rounded-full pointer-events-none" />
+                                <div className="flex items-center gap-3 mb-8 relative z-10 text-right w-full justify-start" dir="rtl">
+                                    <div className="w-10 h-10 rounded-full bg-cyan-900/30 flex items-center justify-center text-cyan-400 border border-cyan-500/20 shadow-[0_0_10px_rgba(8,145,178,0.2)]"><Clock className="w-5 h-5" /></div>
+                                    <h3 className="text-xl font-bold text-slate-200">الأوقات المتاحة</h3>
+                                </div>
+
+                                <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto max-h-[450px] pr-2 custom-scrollbar relative z-10" dir="ltr">
+                                    {timeSlots.map(({ time, disabled, isFull, isBooked }) => (
+                                        <button
+                                            key={time}
+                                            onClick={() => {
+                                                if (!disabled) {
+                                                    setSelectedTime(time);
+                                                    setStep(4);
+                                                }
+                                            }}
+                                            disabled={disabled}
+                                            className={cn("min-h-[60px] w-full px-2 rounded-[20px] text-center text-base font-bold transition-all duration-300 border relative overflow-hidden group flex items-center justify-center",
+                                                disabled ?
+                                                    "opacity-40 cursor-not-allowed bg-slate-800/40 border-slate-700/50 text-slate-500 line-through decoration-slate-600"
+                                                    :
+                                                    selectedTime === time ? "bg-cyan-600 border-cyan-500 text-white shadow-lg shadow-cyan-900/30 scale-[1.05]" : "bg-slate-800/40 border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:border-slate-500 hover:text-slate-200 hover:shadow-md")}
+                                        >
+                                            <span className="relative z-10 font-sans tracking-widest block leading-none">{time}</span>
+                                            {selectedTime === time && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-[200%] translate-x-[-100%] animate-shimmer" />}
+                                        </button>
+                                    ))}
+                                    {timeSlots.length === 0 && <div className="col-span-full text-center text-slate-500 py-10">لا توجد أوقات متاحة لهذا اليوم في هذا الموقع</div>}
+                                </div>
+                            </Card>
+                        </div>
+                    )}
+
+                    {step === 4 && (
                         <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-right-8 duration-500">
                             <Card className="glass-effect border-0 p-6 md:p-10 rounded-[32px] relative overflow-hidden bg-slate-900/40 backdrop-blur-md shadow-2xl ring-1 ring-white/5">
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/5 blur-[80px] rounded-full pointer-events-none" />
@@ -397,7 +532,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                         </div>
                     )}
 
-                    {step === 3 && (
+                    {step === 5 && (
                         <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-right-8 duration-500 space-y-6">
                             <h3 className="text-2xl font-bold text-white text-center mb-6">طريقة الدفع</h3>
                             <div className="grid gap-4">
@@ -422,7 +557,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                         </div>
                     )}
 
-                    {step === 4 && (
+                    {step === 6 && (
                         <div className="max-w-md mx-auto animate-in fade-in zoom-in duration-500 relative perspective-1000">
                             <Card className="glass-effect border-0 p-8 md:p-10 rounded-[40px] text-center space-y-6 bg-slate-900/90 backdrop-blur-xl shadow-[0_0_100px_rgba(8,145,178,0.2)] ring-1 ring-white/10 relative overflow-hidden">
                                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-500 via-cyan-500 to-blue-500" />
@@ -463,6 +598,10 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                         <div className="flex justify-between items-center border-b border-slate-800/50 pb-3">
                                             <span className="text-white font-mono font-bold text-sm">{formData.phone}</span>
                                             <span className="text-slate-500 text-xs flex items-center gap-2">رقم الهاتف <Phone className="w-3.5 h-3.5" /></span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-white font-bold text-sm">{selectedLocation}</span>
+                                            <span className="text-slate-500 text-xs flex items-center gap-2">الموقع <Building2 className="w-3.5 h-3.5 text-cyan-500" /></span>
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="text-white font-bold text-sm">{paymentMethod === "cash" ? "نقداً في العيادة" : "زين كاش"}</span>
@@ -513,14 +652,14 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                     )}
                 </div>
 
-                {/* Navigation Buttons (only for step < 4) */}
-                {step < 4 && (
+                {/* Navigation Buttons (only for step < 6) */}
+                {step < 6 && (
                     <div className="flex justify-between items-center pt-8 border-t border-slate-800/50 mt-8">
                         {step > 1 ? (
                             <Button variant="outline" onClick={handleBack} className="h-12 px-8 rounded-xl border-slate-700 hover:bg-slate-800 text-slate-300 gap-2">السابق</Button>
                         ) : (<div></div>)}
-                        <Button onClick={handleNext} disabled={isSubmitting} className={cn("h-12 px-10 rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 transition-all active:scale-95", isSubmitting ? "opacity-70 cursor-wait" : "bg-cyan-500 hover:bg-cyan-400 text-white")}>
-                            {isSubmitting ? "جاري الحجز..." : step === 3 ? "تأكيد الحجز" : "التالي"}
+                        <Button onClick={handleNext} disabled={isSubmitting || (step === 1 && !selectedLocation) || (step === 2 && !date) || (step === 3 && !selectedTime)} className={cn("h-12 px-10 rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 transition-all active:scale-95", isSubmitting ? "opacity-70 cursor-wait" : "bg-cyan-500 hover:bg-cyan-400 text-white")}>
+                            {isSubmitting ? "جاري الحجز..." : step === 5 ? "تأكيد الحجز" : "التالي"}
                         </Button>
                     </div>
                 )}

@@ -14,18 +14,18 @@ export async function fetchBookingConfig() {
         settings.forEach(s => configMap[s.key] = s.value);
 
         return {
-            workingHours: configMap["working_hours"] || { start: 14, end: 21 },
-            patientsPerHour: typeof configMap["patients_per_hour"] === 'number' ? configMap["patients_per_hour"] : 4,
-            consultationPrice: typeof configMap["consultation_price"] === 'number' ? configMap["consultation_price"] : 25000,
-            slotDuration: typeof configMap["slot_duration"] === 'number' ? configMap["slot_duration"] : 20
+            workingHours: { start: 10, end: 24 },
+            patientsPerHour: 1,
+            consultationPrice: 25000,
+            slotDuration: 60
         };
     } catch (error) {
         console.error("fetchBookingConfig Error:", error);
         return {
-            workingHours: { start: 14, end: 21 },
-            patientsPerHour: 4,
+            workingHours: { start: 10, end: 24 },
+            patientsPerHour: 1,
             consultationPrice: 25000,
-            slotDuration: 20
+            slotDuration: 60
         };
     }
 }
@@ -41,6 +41,7 @@ export async function fetchMonthAvailability(
         patientsPerHour?: number;
         workingHours?: { start: number, end: number };
         slotDuration?: number;
+        disabledDaysOfWeek?: number[];
     }
 ) {
     try {
@@ -76,19 +77,23 @@ export async function fetchMonthAvailability(
             if (doctorId) {
                 const doctor = await prisma.doctor.findUnique({
                     where: { id: doctorId },
-                    select: { patientsPerHour: true, workingHours: true }
+                    select: { patientsPerHour: true, workingHours: true, disabledDaysOfWeek: true, working_hours_schedule: true, clinic_locations: true }
                 });
                 config = {
                     patientsPerHour: doctor?.patientsPerHour || globalConfig.patientsPerHour,
                     workingHours: (doctor?.workingHours as any) || globalConfig.workingHours,
-                    slotDuration: globalConfig.slotDuration
+                    slotDuration: globalConfig.slotDuration,
+                    disabledDaysOfWeek: doctor?.disabledDaysOfWeek || [5]
                 };
             } else {
-                config = globalConfig;
+                config = { ...globalConfig, disabledDaysOfWeek: [5] };
             }
         }
 
-        const { patientsPerHour, workingHours } = config;
+        const { patientsPerHour, workingHours, disabledDaysOfWeek, working_hours_schedule } = config as any;
+
+        const schedule = working_hours_schedule?.slots || [];
+        const locations = Array.from(new Set(schedule.map((s: any) => s.location).filter(Boolean))) as string[];
 
         const bookedSlots: Record<string, Record<string, number>> = {};
         const dailyCounts: Record<string, number> = {};
@@ -117,9 +122,9 @@ export async function fetchMonthAvailability(
         const fullyBookedDates: string[] = [];
         Object.keys(dailyCounts).forEach(day => {
             let isFull = true;
-            for (let h = (workingHours?.start || 14); h < (workingHours?.end || 21); h++) {
+            for (let h = (workingHours?.start || 10); h < (workingHours?.end || 24); h++) {
                 const count = bookedSlots[day]?.[h] || 0;
-                if (count < (patientsPerHour || 4)) {
+                if (count < (patientsPerHour || 1)) {
                     isFull = false;
                     break;
                 }
@@ -130,8 +135,8 @@ export async function fetchMonthAvailability(
         const fullSlots: Record<string, number[]> = {};
         Object.keys(bookedSlots).forEach(day => {
             fullSlots[day] = [];
-            for (let h = (workingHours?.start || 14); h < (workingHours?.end || 21); h++) {
-                if ((bookedSlots[day][h] || 0) >= (patientsPerHour || 4)) {
+            for (let h = (workingHours?.start || 10); h < (workingHours?.end || 24); h++) {
+                if ((bookedSlots[day][h] || 0) >= (patientsPerHour || 1)) {
                     fullSlots[day].push(h);
                 }
             }
@@ -141,7 +146,11 @@ export async function fetchMonthAvailability(
             blockedPeriods: blockedTimes.map(b => ({ start: b.startTime, end: b.endTime, reason: b.reason })),
             fullyBookedDates,
             fullSlots,
-            exactBookedSlots
+            exactBookedSlots,
+            disabledDaysOfWeek: disabledDaysOfWeek || [5],
+            locations,
+            schedule,
+            clinic_locations: (config as any).clinic_locations || []
         };
     } catch (error) {
         console.error("fetchMonthAvailability Error:", error);
@@ -157,10 +166,13 @@ export async function validateAndCreateBooking(data: {
     patientPhone: string;
     startTime: Date;
     doctorId?: string;
+    location?: string;
 }) {
-    const { patientName, patientPhone, startTime, doctorId } = data;
+    const { patientName, patientPhone, startTime, doctorId, location } = data;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
+    const config = await fetchBookingConfig();
 
     let validationResults;
     try {
@@ -170,10 +182,7 @@ export async function validateAndCreateBooking(data: {
                 ? prisma.doctor.findUnique({ where: { id: doctorId }, select: { subscriptionStatus: true } })
                 : prisma.doctor.findFirst({ select: { subscriptionStatus: true } }),
 
-            // 1. Config Fetch
-            fetchBookingConfig(),
-
-            // 2. Capacity Check logic (pre-computation)
+            // 1. Capacity Check logic (pre-computation)
             (async () => {
                 const hourStart = new Date(startTime);
                 hourStart.setMinutes(0, 0, 0);
@@ -188,28 +197,28 @@ export async function validateAndCreateBooking(data: {
                 });
             })(),
 
-            // 3. Blocked Time Check
+            // 2. Blocked Time Check
             prisma.blockedTime.findFirst({
                 where: {
                     ...(doctorId ? { doctorId } : {}),
                     startTime: { lte: startTime },
-                    endTime: { gte: new Date(startTime.getTime() + 20 * 60000) } // Approximation based on default 20min
+                    endTime: { gte: new Date(startTime.getTime() + config.slotDuration * 60000) }
                 }
             }),
 
-            // 4. Conflicting Appointment
+            // 3. Conflicting Appointment
             prisma.appointment.findFirst({
                 where: {
                     status: { not: "CANCELLED" },
                     ...(doctorId ? { doctorId } : {}),
                     AND: [
-                        { startTime: { lt: new Date(startTime.getTime() + 20 * 60000) } },
+                        { startTime: { lt: new Date(startTime.getTime() + config.slotDuration * 60000) } },
                         { endTime: { gt: startTime } }
                     ]
                 }
             }),
 
-            // 5. Duplicate Prevention
+            // 4. Duplicate Prevention
             prisma.appointment.findFirst({
                 where: {
                     patient: { phoneNumber: patientPhone },
@@ -217,14 +226,24 @@ export async function validateAndCreateBooking(data: {
                     status: { not: "CANCELLED" },
                     startTime: { gte: today }
                 }
-            })
+            }),
+
+            // 5. Structural Day-Off Check
+            doctorId
+                ? prisma.doctor.findUnique({ where: { id: doctorId }, select: { disabledDaysOfWeek: true } })
+                : prisma.doctor.findFirst({ select: { disabledDaysOfWeek: true } })
         ]);
     } catch (dbError) {
         console.error("Database connection or validation fetch failed:", dbError);
         return { success: false, message: "فشل الاتصال بقاعدة البيانات. يرجى التأكد من استقرار الخادم." };
     }
 
-    const [statusResult, config, capacityCount, blocked, conflict, duplicate] = validationResults;
+    const [statusResult, capacityCount, blocked, conflict, duplicate, dayOffData] = validationResults;
+    const disabledDays = dayOffData?.disabledDaysOfWeek || [5];
+
+    if (disabledDays.includes(startTime.getDay())) {
+        return { success: false, message: "عذراً، العيادة مغلقة في هذا اليوم بشكل دائم." };
+    }
 
     const subscriptionStatus = statusResult?.subscriptionStatus || "ACTIVE";
     if (subscriptionStatus === "EXPIRED" || subscriptionStatus === "DISABLED") {
@@ -267,7 +286,8 @@ export async function validateAndCreateBooking(data: {
                 startTime,
                 endTime,
                 status: "PENDING",
-                doctorId: doctorId
+                doctorId: doctorId,
+                clinicLocation: location
             }
         });
 

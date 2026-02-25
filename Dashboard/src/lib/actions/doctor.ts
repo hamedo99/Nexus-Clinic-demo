@@ -147,7 +147,8 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
             consultationPrice: true,
             patientsPerHour: true,
             certificates_list: true,
-            working_hours_schedule: true
+            working_hours_schedule: true,
+            disabledDaysOfWeek: true
         }
     });
 
@@ -193,6 +194,26 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
         working_hours_schedule = {};
     }
 
+    let clinic_locations = [];
+    try {
+        const locationsRaw = formData.get("clinic_locations") as string;
+        clinic_locations = locationsRaw ? JSON.parse(locationsRaw) : [];
+    } catch (e) {
+        clinic_locations = [];
+    }
+
+    // Weekly Day-Off (Friday = 5)
+    let disabledDaysOfWeek = currentDoctor.disabledDaysOfWeek || [5];
+    const fridayDisabled = formData.get("disableFridays") === "true";
+
+    if (fridayDisabled) {
+        if (!disabledDaysOfWeek.includes(5)) {
+            disabledDaysOfWeek = [...disabledDaysOfWeek, 5];
+        }
+    } else {
+        disabledDaysOfWeek = disabledDaysOfWeek.filter(d => d !== 5);
+    }
+
     console.log("Updating Doctor ID:", effectiveDoctorId);
 
     try {
@@ -218,7 +239,9 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
                 address,
                 clinicPhone,
                 consultationPrice,
-                patientsPerHour
+                patientsPerHour,
+                disabledDaysOfWeek,
+                clinic_locations: clinic_locations as any
             }
         });
 

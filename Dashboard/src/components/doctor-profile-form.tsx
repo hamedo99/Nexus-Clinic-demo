@@ -5,23 +5,26 @@ import { updateFullDoctorProfile } from "@/lib/actions/doctor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Camera, Loader2, MapPin, User, Save, Award, Clock, Phone, DollarSign, Users, Edit, X, CheckCircle, XCircle } from "lucide-react";
+import { Building2, Camera, Loader2, MapPin, User, Save, Award, Clock, Phone, DollarSign, Users, Edit, X, CheckCircle, XCircle, CalendarX } from "lucide-react";
 import { TimeSlotsManager } from "./time-slots-manager";
 import { CertificatesManager } from "./certificates-manager";
+import { LocationsManager, ClinicLocation } from "./locations-manager";
 
 export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?: () => void }) {
     const [state, formAction, isPending] = useActionState(updateFullDoctorProfile, null);
     const [showStatus, setShowStatus] = useState(false);
-    const [activeTab, setActiveTab] = useState<"clinic" | "profile" | "schedule">("clinic");
+    const [activeTab, setActiveTab] = useState<"clinic" | "profile" | "schedule" | "locations">("clinic");
     const [isEditing, setIsEditing] = useState(false);
 
     // Dynamic Lists
     const initialCerts = (doctor?.certificates_list as any[]) || [];
     const [certificates, setCertificates] = useState<any[]>(initialCerts.map(c => typeof c === 'string' ? { id: Math.random().toString(), title: c, description: "", issuer: "", year: "" } : c));
     const [timeSlots, setTimeSlots] = useState<any[]>(doctor.working_hours_schedule?.slots || []);
+    const [locations, setLocations] = useState<ClinicLocation[]>(doctor.clinic_locations || []);
 
     // JSON hidden state
     const [workingHours, setWorkingHours] = useState(doctor.working_hours_schedule || { text: "" });
+    const [disableFridays, setDisableFridays] = useState<boolean>((doctor.disabledDaysOfWeek || []).includes(5));
 
     // Profile Image
     const [profileImage, setProfileImage] = useState<string>(doctor.profile_image_path || "");
@@ -89,6 +92,8 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
             <input type="hidden" name="certificates_list" value={JSON.stringify(certificates)} />
             <input type="hidden" name="working_hours_schedule" value={JSON.stringify({ ...workingHours, slots: timeSlots })} />
             <input type="hidden" name="profile_image_path" value={profileImage || ""} />
+            <input type="hidden" name="disableFridays" value={String(disableFridays)} />
+            <input type="hidden" name="clinic_locations" value={JSON.stringify(locations)} />
 
             {/* Custom Tabs Navigation and Action Buttons */}
             <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
@@ -106,6 +111,13 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                         className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "profile" ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
                     >
                         <User className="w-4 h-4" /> الملف الشخصي
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveTab("locations")}
+                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "locations" ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
+                    >
+                        <MapPin className="w-4 h-4" /> فروع العيادة
                     </button>
                     <button
                         type="button"
@@ -222,6 +234,29 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                 </div>
                             </div>
                         </div>
+
+                        {/* Weekly Day-off Toggle */}
+                        <div className="mt-8 p-6 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 group hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300">
+                            <div className="flex items-center gap-5 text-right">
+                                <div className={`p-4 rounded-2xl ${disableFridays ? 'bg-rose-100 text-rose-600' : 'bg-teal-100 text-teal-600'} transition-colors duration-500 shadow-sm shadow-inner`}>
+                                    <CalendarX className="w-8 h-8" />
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="font-bold text-slate-900 text-xl tracking-tight">إغلاق العيادة يوم الجمعة دائمياً</p>
+                                    <p className="text-sm text-slate-500 font-medium">سيتم تعطيل كافة أيام الجمعة من تقويم الحجز للمرضى بشكل آلي.</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                disabled={!isEditing}
+                                onClick={() => setDisableFridays(!disableFridays)}
+                                className={`relative inline-flex h-9 w-16 items-center rounded-full transition-all duration-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${disableFridays ? 'bg-rose-500 shadow-lg shadow-rose-200' : 'bg-slate-300'}`}
+                            >
+                                <span
+                                    className={`inline-block h-7 w-7 transform rounded-full bg-white transition-transform duration-500 shadow-md ${disableFridays ? 'translate-x-8' : 'translate-x-1'}`}
+                                />
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -335,45 +370,78 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                     </div>
                 )}
 
-                {/* 3. Dynamic Lists Tab */}
+                {/* 3. Locations Tab */}
+                {activeTab === "locations" && (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        <div className="border-b border-gray-100 pb-4 mb-6">
+                            <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                                <MapPin className="h-5 w-5 text-teal-600" /> فروع ومواقع العيادة
+                            </h3>
+                            <p className="text-slate-500 text-sm mt-1">أضف جميع فروع عيادتك ليتمكن المريض من اختيار الفرع الأقرب له</p>
+                        </div>
+                        <LocationsManager
+                            value={locations}
+                            onChange={setLocations}
+                            isEditing={isEditing}
+                        />
+                    </div>
+                )}
+
+                {/* 4. Schedule and Certificates Tab */}
                 {activeTab === "schedule" && (
                     <div className="space-y-8 animate-in fade-in duration-300">
                         <div className="border-b border-gray-100 pb-4">
                             <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                                <Award className="h-5 w-5 text-teal-600" /> الشهادات وأوقات العمل
+                                <Clock className="h-5 w-5 text-teal-600" /> جدول الدوام والمواقع
                             </h3>
-                            <p className="text-slate-500 text-sm mt-1">تنسيق مظهر الملف الشخصي ومواعيد الطبيب</p>
+                            <p className="text-slate-500 text-sm mt-1">حدد ساعات تواجدك في كل موقع حسب أيام الأسبوع</p>
                         </div>
-                        <div className="grid gap-8">
-                            <CertificatesManager value={certificates} onChange={setCertificates} readOnly={!isEditing} />
-                            <TimeSlotsManager value={timeSlots} onChange={setTimeSlots} readOnly={!isEditing} />
+                        <div className="grid gap-12">
+                            <div className="space-y-4">
+                                <Label className="text-lg font-bold text-slate-700">أوقات العمل في المواقع</Label>
+                                <TimeSlotsManager
+                                    value={timeSlots}
+                                    onChange={setTimeSlots}
+                                    readOnly={!isEditing}
+                                    locations={locations.map(l => l.name)} // Pass location names
+                                />
+                            </div>
+
+                            <div className="space-y-4 border-t border-slate-100 pt-8">
+                                <Label className="text-lg font-bold text-slate-700 font-bold flex items-center gap-2">
+                                    <Award className="w-5 h-5 text-teal-600" /> الشهادات العلمية والخبرات
+                                </Label>
+                                <CertificatesManager value={certificates} onChange={setCertificates} readOnly={!isEditing} />
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
 
             {/* Sticky Submit Button - Only visible in Edit mode */}
-            {isEditing && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-slate-200 flex justify-center z-50 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-full duration-300">
-                    <Button
-                        type="submit"
-                        className="w-full max-w-sm rounded-full bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all"
-                        disabled={isPending}
-                    >
-                        {isPending ? (
-                            <>
-                                <Loader2 className="w-5 h-5 ml-2 animate-spin" />
-                                جاري الحفظ...
-                            </>
-                        ) : (
-                            <>
-                                <Save className="w-5 h-5 ml-2" />
-                                حفظ جميع التغييرات
-                            </>
-                        )}
-                    </Button>
-                </div>
-            )}
-        </form>
+            {
+                isEditing && (
+                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-xl border-t border-slate-200 flex justify-center z-50 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] animate-in slide-in-from-bottom-full duration-300">
+                        <Button
+                            type="submit"
+                            className="w-full max-w-sm rounded-full bg-teal-600 hover:bg-teal-700 text-white font-bold text-lg shadow-lg hover:shadow-xl transition-all"
+                            disabled={isPending}
+                        >
+                            {isPending ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 ml-2 animate-spin" />
+                                    جاري الحفظ...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-5 h-5 ml-2" />
+                                    حفظ جميع التغييرات
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                )
+            }
+        </form >
     );
 }                            

@@ -16,6 +16,13 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface AppointmentActionsProps {
     id: string;
@@ -106,12 +113,18 @@ export function AppointmentActions({ id, onStatusChange, role }: AppointmentActi
                         </div>
                         <div className="grid w-full items-center gap-1.5">
                             <Label htmlFor="time">الوقت</Label>
-                            <Input
-                                type="time"
-                                id="time"
-                                value={time}
-                                onChange={(e) => setTime(e.target.value)}
-                            />
+                            <Select value={time} onValueChange={setTime}>
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="اختر الساعة" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {Array.from({ length: 15 }, (_, i) => 10 + i).map(h => {
+                                        const t = `${h.toString().padStart(2, '0')}:00`;
+                                        const label = h > 12 ? `${h - 12}:00 مساءً` : (h === 12 ? "12:00 مساءً" : `${h}:00 صباحاً`);
+                                        return <SelectItem key={t} value={t}>{label}</SelectItem>
+                                    })}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
 

@@ -11,19 +11,21 @@ interface TimeSlot {
   day: string;
   startTime: string;
   endTime: string;
+  location: string;
 }
 
 interface TimeSlotsManagerProps {
   value?: TimeSlot[];
   onChange: (slots: TimeSlot[]) => void;
   readOnly?: boolean;
+  locations?: string[];
 }
 
 const days = [
   "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"
 ];
 
-export function TimeSlotsManager({ value = [], onChange, readOnly = false }: TimeSlotsManagerProps) {
+export function TimeSlotsManager({ value = [], onChange, readOnly = false, locations = [] }: TimeSlotsManagerProps) {
   const [slots, setSlots] = useState<TimeSlot[]>(value);
 
   const addSlot = () => {
@@ -31,7 +33,8 @@ export function TimeSlotsManager({ value = [], onChange, readOnly = false }: Tim
       id: Math.random().toString(),
       day: "الأحد",
       startTime: "09:00",
-      endTime: "17:00"
+      endTime: "17:00",
+      location: "العيادة الرئيسية"
     };
     const newSlots = [...slots, newSlot];
     setSlots(newSlots);
@@ -79,27 +82,71 @@ export function TimeSlotsManager({ value = [], onChange, readOnly = false }: Tim
             </div>
 
             <div className="flex-1 relative">
-              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400 text-sm">من:</div>
-              <Input
-                type="time"
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400 text-sm z-10">من:</div>
+              <Select
                 value={slot.startTime}
-                onChange={(e) => updateSlot(slot.id, 'startTime', e.target.value)}
-                className="bg-white border-slate-200 focus:ring-teal-500 rounded-lg pr-10 text-left disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
-                dir="ltr"
+                onValueChange={(val) => updateSlot(slot.id, 'startTime', val)}
                 disabled={readOnly}
-              />
+              >
+                <SelectTrigger className="bg-white border-slate-200 focus:ring-teal-500 rounded-lg pr-10 text-left disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 15 }, (_, i) => 10 + i).map(h => {
+                    const time = `${h.toString().padStart(2, '0')}:00`;
+                    const label = h > 12 ? `${h - 12}:00 مساءً` : (h === 12 ? "12:00 مساءً" : `${h}:00 صباحاً`);
+                    return <SelectItem key={time} value={time}>{label}</SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex-1 relative">
-              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400 text-sm">إلى:</div>
-              <Input
-                type="time"
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400 text-sm z-10">إلى:</div>
+              <Select
                 value={slot.endTime}
-                onChange={(e) => updateSlot(slot.id, 'endTime', e.target.value)}
-                className="bg-white border-slate-200 focus:ring-teal-500 rounded-lg pr-10 text-left disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
-                dir="ltr"
+                onValueChange={(val) => updateSlot(slot.id, 'endTime', val)}
                 disabled={readOnly}
-              />
+              >
+                <SelectTrigger className="bg-white border-slate-200 focus:ring-teal-500 rounded-lg pr-10 text-left disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 15 }, (_, i) => 10 + i).map(h => {
+                    const time = `${h.toString().padStart(2, '0')}:00`;
+                    const label = h > 12 ? `${h - 12}:00 مساءً` : (h === 12 ? "12:00 مساءً" : `${h}:00 صباحاً`);
+                    return <SelectItem key={time} value={time}>{label}</SelectItem>
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex-1 relative md:col-span-3">
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400 text-sm z-10">الموقع / العيادة:</div>
+              {locations && locations.length > 0 ? (
+                <Select
+                  value={slot.location || ""}
+                  onValueChange={(val) => updateSlot(slot.id, 'location', val)}
+                  disabled={readOnly}
+                >
+                  <SelectTrigger className="bg-white border-slate-200 focus:ring-teal-500 rounded-lg pr-28 text-right disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100">
+                    <SelectValue placeholder="اختر الموقع" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.map(loc => (
+                      <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  placeholder="مثال: عيادة المنصور"
+                  value={slot.location || ""}
+                  onChange={(e) => updateSlot(slot.id, 'location', e.target.value)}
+                  className="bg-white border-slate-200 focus:ring-teal-500 rounded-lg pr-28 text-right disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
+                  disabled={readOnly}
+                />
+              )}
             </div>
           </div>
 

@@ -30,6 +30,7 @@ export async function createBooking(prevState: any, formData: FormData) {
     const dateStr = formData.get("date") as string;
     const timeStr = formData.get("time") as string;
     const doctorId = formData.get("doctorId") as string | undefined;
+    const location = formData.get("location") as string | undefined;
 
     if (!name || !phone || !dateStr) {
         return { message: "الرجاء ملء جميع الحقول", success: false };
@@ -86,7 +87,8 @@ export async function createBooking(prevState: any, formData: FormData) {
         patientName: name,
         patientPhone: phone,
         startTime,
-        doctorId
+        doctorId,
+        location
     });
 
     if (result.success) {
