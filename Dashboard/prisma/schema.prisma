@@ -44,6 +44,7 @@ model Doctor {
   working_hours_schedule Json?
   years_of_experience    Int?               @default(0)
   disabledDaysOfWeek     Int[]              @default([5])
+  clinic_locations       Json?
   appointments           Appointment[]
   blockedTimes           BlockedTime[]
   patients               Patient[]

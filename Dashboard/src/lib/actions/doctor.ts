@@ -145,7 +145,8 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
             patientsPerHour: true,
             certificates_list: true,
             working_hours_schedule: true,
-            disabledDaysOfWeek: true
+            disabledDaysOfWeek: true,
+            clinic_locations: true
         }
     });
 
@@ -230,7 +231,8 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
                 clinicPhone,
                 consultationPrice,
                 patientsPerHour,
-                disabledDaysOfWeek
+                disabledDaysOfWeek,
+                clinic_locations: clinic_locations as any
             }
         });
 
