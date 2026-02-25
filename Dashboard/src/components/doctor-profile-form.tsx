@@ -175,7 +175,8 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                     name="clinic_name"
                                     defaultValue={doctor?.name || ""}
                                     placeholder="مثال: عيادة النور التخصصية"
-                                    className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500"
+                                    className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
+                                    disabled={!isEditing}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -186,25 +187,13 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                         name="clinicPhone"
                                         defaultValue={doctor?.clinicPhone || ""}
                                         placeholder="+964 7XX XXX XXXX"
-                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10"
+                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
+                                        disabled={!isEditing}
                                     />
                                     <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                                 </div>
                             </div>
 
-                            <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="address" className="text-slate-700">العنوان الكامل</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="address"
-                                        name="address"
-                                        defaultValue={doctor?.address || ""}
-                                        placeholder="مثال: بغداد، المنصور، شارع 14 رمضان"
-                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10"
-                                    />
-                                    <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                                </div>
-                            </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="consultationPrice" className="text-slate-700">سعر الكشفية (دينار عراقي)</Label>
@@ -214,7 +203,8 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                         name="consultationPrice"
                                         type="number"
                                         defaultValue={doctor?.consultationPrice ?? 25000}
-                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10"
+                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
+                                        disabled={!isEditing}
                                     />
                                     <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                                 </div>
@@ -228,7 +218,8 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                         name="patientsPerHour"
                                         type="number"
                                         defaultValue={doctor?.patientsPerHour ?? 4}
-                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10"
+                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
+                                        disabled={!isEditing}
                                     />
                                     <Users className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                                 </div>
@@ -336,35 +327,7 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="years_of_experience" className="text-slate-700">سنين الخبرة</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="years_of_experience"
-                                            name="years_of_experience"
-                                            type="number"
-                                            defaultValue={doctor?.years_of_experience ?? 0}
-                                            className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
-                                            disabled={!isEditing}
-                                        />
-                                        <Clock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                                    </div>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="Maps_url" className="text-slate-700">رابط خرائط جوجل</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="Maps_url"
-                                            name="Maps_url"
-                                            defaultValue={doctor?.Maps_url || ""}
-                                            placeholder="https://maps.google.com/?q=..."
-                                            className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
-                                            disabled={!isEditing}
-                                        />
-                                        <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>

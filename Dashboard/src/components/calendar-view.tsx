@@ -26,23 +26,86 @@ type AppointmentEvent = {
 
 export const CalendarView = React.memo(function CalendarView({ appointments }: { appointments: any[] }) {
     const [selectedEvent, setSelectedEvent] = useState<any>(null);
+    const [activeView, setActiveView] = useState<string>("timeGridDay");
 
-    const events = React.useMemo(() => appointments.map((apt) => ({
-        id: apt.id,
-        title: apt.patient.fullName,
-        start: new Date(apt.startTime),
-        end: new Date(apt.endTime),
-        backgroundColor: apt.status === "CONFIRMED" ? "#10b981" : "#3b82f6", // Green or Blue
-        borderColor: "transparent",
-        textColor: "#ffffff",
-        extendedProps: {
-            status: apt.status,
-            phone: apt.patient.phoneNumber
-        }
-    })), [appointments]);
+    const events = React.useMemo(() => {
+        const groups: Record<number, any[]> = {};
+
+        appointments.forEach(apt => {
+            const timeKey = new Date(apt.startTime).getTime();
+            if (!groups[timeKey]) groups[timeKey] = [];
+            groups[timeKey].push(apt);
+        });
+
+        const parsedEvents: any[] = [];
+
+        Object.values(groups).forEach(groupApts => {
+            groupApts.sort((a, b) => {
+                if (a.createdAt && b.createdAt) {
+                    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                }
+                return a.id.localeCompare(b.id);
+            });
+
+            groupApts.forEach((apt, index) => {
+                const originalStart = new Date(apt.startTime);
+
+                // Dynamically decide the display boundary based on active view.
+                // In Day View, we assign full hour to trigger Fullcalendar's horizontal layout side-by-side.
+                // In Week/Month View, we stagger them slightly vertically so they stack.
+                let visualStart, visualEnd;
+
+                if (activeView === "timeGridDay") {
+                    // Force start/end exactly on the hour, Fullcalendar handles horizontal overlap.
+                    visualStart = new Date(originalStart.getTime());
+                    visualEnd = new Date(originalStart.getTime() + 60 * 60000);
+                } else {
+                    // In narrow views, split the hour vertically.
+                    const durationMins = 60 / Math.max(groupApts.length, 1);
+                    visualStart = new Date(originalStart.getTime() + (index * durationMins) * 60000);
+                    visualEnd = new Date(visualStart.getTime() + (durationMins - 1) * 60000);
+                }
+
+                parsedEvents.push({
+                    id: apt.id,
+                    title: `${index + 1}- ${apt.patient.fullName}`,
+                    start: visualStart,
+                    end: visualEnd,
+                    backgroundColor: "transparent",
+                    borderColor: "transparent",
+                    textColor: "transparent",
+                    extendedProps: {
+                        status: apt.status,
+                        phone: apt.patient.phoneNumber,
+                        originalStart,
+                        originalEnd: new Date(apt.endTime),
+                        statusClass: apt.status === 'CONFIRMED'
+                            ? 'bg-emerald-50 border-emerald-500 text-emerald-900'
+                            : apt.status === 'CANCELLED'
+                                ? 'bg-red-50 border-red-500 text-red-900'
+                                : 'bg-amber-50 border-amber-500 text-amber-900'
+                    }
+                });
+            });
+        });
+
+        return parsedEvents;
+    }, [appointments, activeView]);
 
     return (
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow h-full">
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow h-full relative">
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                .fc-timegrid-slot {
+                    height: 5.5rem !important; /* Increase vertical scale for better stacking */
+                }
+                .fc-event {
+                    background: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                    margin-bottom: 2px !important;
+                }
+            `}} />
             <FullCalendar
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 initialView="timeGridDay"
@@ -58,15 +121,30 @@ export const CalendarView = React.memo(function CalendarView({ appointments }: {
                 allDaySlot={false}
                 events={events}
                 height="100%"
-                slotDuration="00:20:00" // 20 min slots
+                slotDuration="01:00:00" // 1 hour slots
                 nowIndicator={true}
+                slotEventOverlap={activeView === "timeGridDay" ? false : true} // Force side-by-side ONLY in Day view
+                eventMaxStack={20}
+                datesSet={(arg) => setActiveView(arg.view.type)}
+                eventContent={(info) => {
+                    const blockStart = info.event.start;
+                    const timeString = blockStart ? format(blockStart, 'hh:mm a', { locale: arSA }) : info.timeText;
+
+                    return (
+                        <div className={`h-full w-full rounded-md px-1 flex flex-col justify-center overflow-hidden border-t-2 shadow-sm ${info.event.extendedProps.statusClass} ${activeView === 'timeGridDay' ? 'py-1' : 'py-0'}`}>
+                            <div className={`font-bold ${activeView === 'timeGridDay' ? 'text-xs leading-tight whitespace-normal' : 'text-[10px] leading-none truncate whitespace-nowrap text-ellipsis mt-0.5'}`}>
+                                {info.event.title}
+                            </div>
+                        </div>
+                    );
+                }}
                 eventClick={(info) => {
                     setSelectedEvent({
-                        title: info.event.title,
+                        title: info.event.title.replace(/^\d+- /, ''), // Remove the number prefix if desired, or keep it
                         status: info.event.extendedProps.status,
                         phone: info.event.extendedProps.phone,
-                        start: info.event.start,
-                        end: info.event.end
+                        start: info.event.extendedProps.originalStart,
+                        end: info.event.extendedProps.originalEnd
                     });
                 }}
             />
@@ -124,8 +202,8 @@ export const CalendarView = React.memo(function CalendarView({ appointments }: {
                                     <span className="text-sm font-bold text-slate-700 dark:text-slate-200">حالة الموعد</span>
                                 </div>
                                 <span className={`px-5 py-2 rounded-full text-xs font-bold shadow-sm ${selectedEvent.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' :
-                                        selectedEvent.status === 'CANCELLED' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border border-red-200 dark:border-red-800' :
-                                            'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
+                                    selectedEvent.status === 'CANCELLED' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 border border-red-200 dark:border-red-800' :
+                                        'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-600'
                                     }`}>
                                     {selectedEvent.status === 'CONFIRMED' ? 'مؤكد ✓' : selectedEvent.status === 'CANCELLED' ? 'ملغي ✕' : 'قيد الانتظار ⏳'}
                                 </span>
