@@ -42,6 +42,7 @@ export async function fetchMonthAvailability(
         workingHours?: { start: number, end: number };
         slotDuration?: number;
         disabledDaysOfWeek?: number[];
+        consultationPrice?: number;
     }
 ) {
     try {
