@@ -41,6 +41,7 @@ export async function fetchMonthAvailability(
         patientsPerHour?: number;
         workingHours?: { start: number, end: number };
         slotDuration?: number;
+        disabledDaysOfWeek?: number[];
     }
 ) {
     try {
@@ -143,7 +144,7 @@ export async function fetchMonthAvailability(
             fullyBookedDates,
             fullSlots,
             exactBookedSlots,
-            disabledDaysOfWeek: (config as any).disabledDaysOfWeek || [5]
+            disabledDaysOfWeek: config?.disabledDaysOfWeek || [5]
         };
     } catch (error) {
         console.error("fetchMonthAvailability Error:", error);
@@ -233,7 +234,7 @@ export async function validateAndCreateBooking(data: {
         return { success: false, message: "خارج ساعات العمل" };
     }
 
-    const disabledDays = (statusResult as any)?.disabledDaysOfWeek || [5];
+    const disabledDays = statusResult?.disabledDaysOfWeek || [5];
     if (disabledDays.includes(startTime.getDay())) {
         return { success: false, message: "عذراً، العيادة مغلقة في هذا اليوم بشكل دوري." };
     }
