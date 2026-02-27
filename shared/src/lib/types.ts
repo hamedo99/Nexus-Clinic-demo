@@ -18,6 +18,7 @@ export interface BookingConfig {
     patientsPerHour: number;
     consultationPrice: number;
     slotDuration: number;
+    disabledDaysOfWeek?: number[];
 }
 
 export interface WorkingHours {
