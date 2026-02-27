@@ -37,7 +37,7 @@ export const BookingsChart = memo(function BookingsChart({ data }: BookingsChart
                 </CardTitle>
             </CardHeader>
             <CardContent className="h-[300px] min-h-[300px] p-6 w-full relative" dir="ltr">
-                <ResponsiveContainer width="99%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                             <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
