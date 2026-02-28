@@ -41,6 +41,7 @@ export async function fetchMonthAvailability(
         patientsPerHour?: number;
         workingHours?: { start: number, end: number };
         slotDuration?: number;
+        disabledDaysOfWeek?: number[];
     }
 ) {
     try {
