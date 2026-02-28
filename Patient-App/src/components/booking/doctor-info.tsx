@@ -2,33 +2,46 @@
 import { memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { MapPin, Info, Award, GraduationCap, Star, Stethoscope } from "lucide-react"
-import { CertificationItem, CaseItem, StatCard } from "./shared"
+import { Info, Award, GraduationCap, BookOpen } from "lucide-react"
 import { DoctorData } from "@/lib/shared-logic/types"
 
 const DoctorInfo = memo(function DoctorInfo({ doctor }: { doctor: DoctorData }) {
+    // Split the name for the colored styling "د. أسامة الجنابي" -> "الجنابي" in cyan
+    const nameParts = doctor.nameAr.split(" ");
+    if (nameParts.length < 2) nameParts.push(""); // Fallback just in case
+    const lastName = nameParts[nameParts.length - 1];
+    const restName = nameParts.slice(0, -1).join(" ");
+
     return (
-        <div className="w-full max-w-md space-y-6 text-center px-4">
+        <div className="w-full max-w-md space-y-6 flex flex-col items-center text-center px-4 -mt-2">
 
-            {/* Action Buttons */}
-            <div className="flex flex-col gap-3 w-full">
-                {/* Location Button */}
-                <Button
-                    className="w-full h-14 text-lg font-bold rounded-2xl bg-gradient-to-r from-[#84cc16] to-[#10b981] hover:from-[#65a30d] hover:to-[#059669] text-white shadow-[0_8px_30px_-10px_rgba(16,185,129,0.4)] border-0 flex items-center justify-center gap-2 group transition-all duration-300 transform hover:scale-[1.02] relative overflow-hidden"
-                    onClick={() => window.open(doctor.mapsUrl || "https://www.google.com/maps/search/?api=1&query=Al+Mansour,+Baghdad", "_blank")}
-                >
-                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 blur-md" />
-                    <MapPin className="w-5 h-5 relative z-10" />
-                    <span className="relative z-10">موقع العيادة</span>
-                </Button>
+            {/* Availability Badge */}
+            <div className="inline-flex items-center gap-2 bg-[#1e293b]/60 border border-slate-700/50 rounded-full px-5 py-1.5 backdrop-blur-md">
+                <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10b981]"></span>
+                </span>
+                <span className="text-slate-200 text-[13px] font-medium tracking-wide">متاح للحجز اليوم</span>
+            </div>
 
-                {/* Info Button */}
+            {/* Doctor Name */}
+            <div className="space-y-1.5 mt-2">
+                <h1 className="text-[32px] font-black text-white tracking-tight drop-shadow-sm">
+                    {restName} <span className="text-cyan-400 drop-shadow-[0_0_10px_rgba(34,211,238,0.3)]">{lastName}</span>
+                </h1>
+
+                {/* Doctor Title */}
+                <p className="text-slate-300/80 text-[15px] font-light tracking-wide px-4">
+                    {doctor.titleAr || "استشاري جراحة العظام والمفاصل والكسور"}
+                </p>
+            </div>
+
+            {/* Action Button: Info */}
+            <div className="w-full flex justify-center mt-4">
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full h-14 text-lg font-normal rounded-2xl border-slate-700/60 bg-[#1e293b]/50 text-slate-300 hover:bg-[#1e293b] hover:text-white flex items-center justify-between px-6 group transition-all backdrop-blur-sm">
-                            <div className="flex items-center gap-2">
-                                <Info className="w-5 h-5 opacity-60 group-hover:opacity-100 group-hover:text-cyan-400 transition-all" />
-                            </div>
+                        <Button variant="outline" className="w-[80%] max-w-[240px] h-12 text-sm font-medium rounded-2xl border-slate-700/50 bg-slate-800/20 text-slate-200 hover:bg-slate-800/40 hover:text-white flex items-center justify-center gap-3 group transition-all backdrop-blur-sm shadow-sm ring-1 ring-white/5">
+                            <BookOpen className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
                             <span>المعلومات والشهادات</span>
                         </Button>
                     </DialogTrigger>
@@ -88,44 +101,6 @@ const DoctorInfo = memo(function DoctorInfo({ doctor }: { doctor: DoctorData }) 
                         </div>
                     </DialogContent>
                 </Dialog>
-            </div>
-
-            {/* Stats Row */}
-            <div className="grid grid-cols-2 gap-4 w-full">
-                {/* Rating */}
-                <div className="relative overflow-hidden bg-[#1e293b]/50 border border-slate-700/50 rounded-[24px] p-4 flex flex-col items-center justify-center gap-2 group hover:bg-[#1e293b]/80 transition-all duration-300">
-                    <div className="absolute top-0 right-0 p-2 opacity-50">
-                        <Star className="w-8 h-8 text-slate-800 fill-slate-800 -rotate-12" />
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 mb-1 shadow-[0_0_15px_rgba(251,191,36,0.2)]">
-                        <Star className="w-5 h-5 fill-amber-400" />
-                    </div>
-                    <span className="text-2xl font-black text-white tracking-tight">{doctor.rating}</span>
-                    <span className="text-xs text-slate-400 font-medium">تقييم المرضى</span>
-                </div>
-
-                {/* Experience */}
-                <div className="relative overflow-hidden bg-[#1e293b]/50 border border-slate-700/50 rounded-[24px] p-4 flex flex-col items-center justify-center gap-2 group hover:bg-[#1e293b]/80 transition-all duration-300">
-                    <div className="absolute top-0 right-0 p-2 opacity-50">
-                        <Stethoscope className="w-8 h-8 text-slate-800 -rotate-12" />
-                    </div>
-                    <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center text-cyan-400 mb-1 shadow-[0_0_15px_rgba(6,182,212,0.2)]">
-                        <Stethoscope className="w-5 h-5" />
-                    </div>
-                    <span className="text-2xl font-black text-white tracking-tight">+{doctor.yearsExperience}</span>
-                    <span className="text-xs text-slate-400 font-medium">سنة خبرة</span>
-                </div>
-            </div>
-
-            {/* Availability Badge */}
-            <div className="pt-4 pb-2">
-                <div className="inline-flex items-center gap-2 bg-[#064e3b]/40 border border-[#059669]/30 rounded-full px-5 py-2 backdrop-blur-md shadow-lg">
-                    <span className="relative flex h-2.5 w-2.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#10b981]"></span>
-                    </span>
-                    <span className="text-[#34d399] text-sm font-bold tracking-wide">متاح للحجز اليوم</span>
-                </div>
             </div>
         </div>
     );

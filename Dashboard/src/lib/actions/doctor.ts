@@ -241,7 +241,7 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
                 consultationPrice,
                 patientsPerHour,
                 disabledDaysOfWeek,
-                clinic_locations: clinic_locations as any
+                clinic_locations
             }
         });
 
