@@ -12,5 +12,4 @@ export interface DashboardStats {
         platformTotalPatients: number;
         isGlobal: boolean;
     };
-    chartData: { date: string; count: number }[];
 }

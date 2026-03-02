@@ -28,9 +28,10 @@ interface AppointmentActionsProps {
     id: string;
     onStatusChange?: (id: string, status: "CONFIRMED" | "CANCELLED") => void;
     role?: string;
+    status?: string;
 }
 
-export function AppointmentActions({ id, onStatusChange, role }: AppointmentActionsProps) {
+export function AppointmentActions({ id, onStatusChange, role, status }: AppointmentActionsProps) {
     if (role === "ADMIN") return null;
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -78,21 +79,24 @@ export function AppointmentActions({ id, onStatusChange, role }: AppointmentActi
     };
 
     return (
-        <div className="flex gap-2">
-            <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleUpdate("CONFIRMED")}
-                disabled={loading}
-            >
-                تأكيد
-            </Button>
+        <div className="flex gap-2 items-center">
+            {status !== "CONFIRMED" && (
+                <Button
+                    variant="default"
+                    size="sm"
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold ml-2 shadow-sm border-0 rounded-lg px-4"
+                    onClick={() => handleUpdate("CONFIRMED")}
+                    disabled={loading}
+                >
+                    تأكيد ✓
+                </Button>
+            )}
 
             <Dialog open={isRescheduling} onOpenChange={setIsRescheduling}>
                 <DialogTrigger asChild>
-                    <Button variant="secondary" size="sm" disabled={loading} className="bg-yellow-100 text-yellow-700 hover:bg-yellow-200">
-                        تأجيل
-                    </Button>
+                    <button disabled={loading} className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-lg transition-colors cursor-pointer" title="تأجيل">
+                        ⏱️
+                    </button>
                 </DialogTrigger>
                 <DialogContent>
                     <DialogHeader>
@@ -135,15 +139,14 @@ export function AppointmentActions({ id, onStatusChange, role }: AppointmentActi
                 </DialogContent>
             </Dialog>
 
-            <Button
-                variant="ghost"
-                size="sm"
-                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+            <button
+                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-lg transition-colors cursor-pointer"
                 onClick={() => handleUpdate("CANCELLED")}
                 disabled={loading}
+                title="إلغاء الموعد"
             >
-                إلغاء
-            </Button>
+                ❌
+            </button>
         </div>
     );
 }
