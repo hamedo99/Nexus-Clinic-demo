@@ -23,6 +23,10 @@ async function DashboardContent({ searchParams }: { searchParams: { q?: string }
         session?.role === "ADMIN" ? getDoctorList() : Promise.resolve([])
     ]);
 
+    if (!data) {
+        throw new Error("Failed to fetch dashboard data");
+    }
+
     return (
         <DashboardClient
             initialData={data}

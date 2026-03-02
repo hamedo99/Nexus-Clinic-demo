@@ -32,28 +32,25 @@ interface AppointmentActionsProps {
 }
 
 export function AppointmentActions({ id, onStatusChange, role, status }: AppointmentActionsProps) {
-    if (role === "ADMIN") return null;
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [isRescheduling, setIsRescheduling] = useState(false);
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState("10:00");
 
-    const handleUpdate = async (status: "CONFIRMED" | "CANCELLED") => {
+    const handleUpdate = async (newStatus: "CONFIRMED" | "CANCELLED") => {
         // 1. Optimistic Update (Lightning Speed!)
         if (onStatusChange) {
-            onStatusChange(id, status);
+            onStatusChange(id, newStatus);
         }
 
         setLoading(true);
         try {
             // 2. Server Request
-            await updateAppointmentStatus(id, status);
+            await updateAppointmentStatus(id, newStatus);
             router.refresh(); // Sync server state as backup
         } catch (error) {
             console.error("Failed to update status", error);
-            // Revert would happen here if we had a revert callback, 
-            // but for now we rely on the next fetch or router.refresh() to fix it if it failed.
             alert("حدث خطأ في تحديث الحالة");
         } finally {
             setLoading(false);
@@ -77,6 +74,8 @@ export function AppointmentActions({ id, onStatusChange, role, status }: Appoint
             alert("فشل في تأجيل الموعد");
         }
     };
+
+    if (role === "ADMIN") return null;
 
     return (
         <div className="flex gap-2 items-center">
