@@ -33,9 +33,10 @@ interface NewAppointmentButtonProps {
     allDoctors?: { id: string; name: string; workingHours?: any }[];
     role?: string;
     doctorId?: string;
+    customTrigger?: React.ReactNode;
 }
 
-export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role, doctorId }: NewAppointmentButtonProps) {
+export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role, doctorId, customTrigger }: NewAppointmentButtonProps) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [date, setDate] = useState<Date | undefined>(new Date());
@@ -118,10 +119,12 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    حجز موعد جديد
-                </Button>
+                {customTrigger ? customTrigger : (
+                    <Button size="sm" className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        حجز موعد جديد
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]" dir="rtl">
                 <DialogHeader className="text-right">

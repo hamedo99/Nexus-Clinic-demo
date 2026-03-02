@@ -167,7 +167,7 @@ export async function validateAndCreateBooking(data: {
     today.setHours(0, 0, 0, 0);
 
     // Parallelize independent validations for maximum throughput
-    const [statusResult, config, capacityCount, blocked, conflict, duplicate] = await Promise.all([
+    const [statusResult, config, capacityCount, blocked, duplicate] = await Promise.all([
         // 0. Subscription Check
         doctorId
             ? prisma.doctor.findUnique({ where: { id: doctorId }, select: { subscriptionStatus: true, disabledDaysOfWeek: true } })
@@ -200,19 +200,7 @@ export async function validateAndCreateBooking(data: {
             }
         }),
 
-        // 4. Conflicting Appointment
-        prisma.appointment.findFirst({
-            where: {
-                status: { not: "CANCELLED" },
-                ...(doctorId ? { doctorId } : {}),
-                AND: [
-                    { startTime: { lt: new Date(startTime.getTime() + 20 * 60000) } },
-                    { endTime: { gt: startTime } }
-                ]
-            }
-        }),
-
-        // 5. Duplicate Prevention
+        // 4. Duplicate Prevention
         prisma.appointment.findFirst({
             where: {
                 patient: { phoneNumber: patientPhone },
@@ -248,9 +236,6 @@ export async function validateAndCreateBooking(data: {
         return { success: false, message: "عذراً، العيادة مغلقة في هذا الوقت." };
     }
 
-    if (conflict) {
-        return { success: false, message: "عذراً، هذا الموعد محجوز مسبقاً." };
-    }
 
     if (duplicate) {
         return { success: false, message: "عذراً، لديك حجز نشط مسبقاً." };

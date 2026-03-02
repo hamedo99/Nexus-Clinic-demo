@@ -27,7 +27,7 @@ const getPlatformStats = unstable_cache(
 /**
  * Aggregates all statistics and recent data for the dashboard.
  */
-export async function getDashboardStats(filterDoctorId?: string, currentSession?: any): Promise<DashboardStats | any> {
+export async function getDashboardStats(filterDoctorId?: string, currentSession?: any, selectedDate?: string, searchQuery?: string): Promise<DashboardStats | any> {
     noStore();
     try {
         const session = currentSession || await getSession() as any;
@@ -44,13 +44,9 @@ export async function getDashboardStats(filterDoctorId?: string, currentSession?
             doctorFilter = { doctorId: session.doctorId || "00000000-0000-0000-0000-000000000000" };
         }
 
-        const today = new Date();
+        const today = selectedDate ? new Date(selectedDate) : new Date();
         const startOfDay = new Date(today.setHours(0, 0, 0, 0));
         const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(today.getDate() - 6);
-        sevenDaysAgo.setHours(0, 0, 0, 0);
 
         const [
             clinicStatus,
@@ -58,15 +54,20 @@ export async function getDashboardStats(filterDoctorId?: string, currentSession?
             newPatientsCount,
             pendingCount,
             todaysCount,
-            platformStats,
-            recentAppointments
+            platformStats
         ] = await Promise.all([
             getClinicStatus(doctorFilter.doctorId),
             prisma.appointment.findMany({
                 where: {
                     ...doctorFilter,
                     status: { in: ["PENDING", "CONFIRMED"] },
-                    startTime: { gte: startOfDay }
+                    ...(searchQuery ? {} : { startTime: { gte: startOfDay, lte: endOfDay } }),
+                    ...(searchQuery ? {
+                        OR: [
+                            { patient: { fullName: { contains: searchQuery, mode: "insensitive" } } },
+                            { patient: { phoneNumber: { contains: searchQuery, mode: "insensitive" } } }
+                        ]
+                    } : {})
                 },
                 select: {
                     id: true,
@@ -76,8 +77,10 @@ export async function getDashboardStats(filterDoctorId?: string, currentSession?
                     patient: { select: { id: true, fullName: true, phoneNumber: true } },
                     doctor: { select: { id: true, name: true } }
                 },
-                orderBy: { startTime: 'asc' },
-                take: 10
+                orderBy: [
+                    { startTime: 'asc' },
+                    { createdAt: 'asc' }
+                ]
             }),
             prisma.patient.count({
                 where: { ...doctorFilter, createdAt: { gte: startOfDay } }
@@ -86,7 +89,7 @@ export async function getDashboardStats(filterDoctorId?: string, currentSession?
                 where: {
                     ...doctorFilter,
                     status: "PENDING",
-                    startTime: { gte: startOfDay }
+                    startTime: { gte: startOfDay, lte: endOfDay }
                 }
             }),
             prisma.appointment.count({
@@ -96,36 +99,9 @@ export async function getDashboardStats(filterDoctorId?: string, currentSession?
                     status: { not: "CANCELLED" }
                 }
             }),
-            isAdmin ? getPlatformStats() : Promise.resolve({ totalDoctors: 0, totalApps: 0, totalPats: 0 }),
-            prisma.appointment.findMany({
-                where: {
-                    ...doctorFilter,
-                    createdAt: { gte: sevenDaysAgo }
-                },
-                select: { createdAt: true }
-            })
+            isAdmin ? getPlatformStats() : Promise.resolve({ totalDoctors: 0, totalApps: 0, totalPats: 0 })
         ]);
 
-        const chartDataMap: Record<string, number> = {};
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(sevenDaysAgo);
-            d.setDate(d.getDate() + i);
-            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            chartDataMap[dateStr] = 0;
-        }
-
-        recentAppointments.forEach(app => {
-            const d = new Date(app.createdAt);
-            const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-            if (chartDataMap[dateStr] !== undefined) {
-                chartDataMap[dateStr]++;
-            }
-        });
-
-        const chartData = Object.keys(chartDataMap).sort().map(date => ({
-            date,
-            count: chartDataMap[date]
-        }));
 
         return {
             clinicStatus,
@@ -138,8 +114,7 @@ export async function getDashboardStats(filterDoctorId?: string, currentSession?
                 platformTotalAppointments: platformStats.totalApps,
                 platformTotalPatients: platformStats.totalPats,
                 isGlobal: isAdmin && (!filterDoctorId || filterDoctorId === "ALL")
-            },
-            chartData
+            }
         };
     } catch (error) {
         console.error("Dashboard Stats Fetch Error:", error);

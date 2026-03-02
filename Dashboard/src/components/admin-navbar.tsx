@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useDashboardStore } from "@/lib/store";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export function AdminNavbar({ userName, role }: { userName?: string; role?: string }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -23,6 +24,27 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
     const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
     const notificationRef = useRef<HTMLDivElement>(null);
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const router = useRouter();
+    const [searchTerm, setSearchTerm] = useState(searchParams.get("q")?.toString() || "");
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (searchTerm) {
+                params.set("q", searchTerm);
+            } else {
+                params.delete("q");
+            }
+            // Only replace if the parameter actually changed to avoid infinite loops
+            if (searchParams.get("q") !== params.get("q")) {
+                router.replace(`${pathname}?${params.toString()}`);
+            }
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm, pathname, router, searchParams]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -65,6 +87,8 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
                     <Input
                         placeholder="البحث عن مرضى، مواعيد..."
                         className="pl-10 bg-gray-50 dark:bg-gray-900/50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-primary/20"
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        value={searchTerm}
                     />
                 </div>
             </div>
