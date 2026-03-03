@@ -373,6 +373,8 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto pb-10">
                                 {(() => {
+                                    if (isLoadingAvailability) return null;
+
                                     // Use activeConfig for 0ms server-rendered locations
                                     const dbLocations = activeConfig.clinic_locations && activeConfig.clinic_locations.length > 0 ? activeConfig.clinic_locations : (availability.clinic_locations || []);
                                     const scheduleLocations = Array.from(new Set(availability.schedule.map(s => s.location)));
@@ -457,12 +459,16 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                         );
                                     });
                                 })()}
-                                {activeConfig.clinic_locations?.length === 0 && availability.clinic_locations?.length === 0 && availability.schedule?.length === 0 && (
+                                {isLoadingAvailability ? (
+                                    <div className="col-span-full py-20 flex justify-center items-center">
+                                        <Loader2 className="w-10 h-10 text-cyan-500 animate-spin" />
+                                    </div>
+                                ) : (activeConfig.clinic_locations?.length === 0 && availability.clinic_locations?.length === 0 && availability.schedule?.length === 0) ? (
                                     <div className="col-span-full py-20 text-center">
                                         <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4" />
                                         <p className="text-slate-400">لا توجد مواقع عمل مسجلة حالياً</p>
                                     </div>
-                                )}
+                                ) : null}
                             </div>
                         </div>
                     )}
