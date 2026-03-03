@@ -40,7 +40,6 @@ model Doctor {
   Maps_url               String?
   certificates_list      Json?
   doctor_name            String?
-  doctor_name_en         String?
   profile_image_path     String?
   specialty_title        String?
   working_hours_schedule Json?
