@@ -4,13 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm run db:generate && next build",
     "start": "next start",
     "lint": "next lint",
     "db:push": "npx prisma db push --schema=./prisma/schema.prisma",
     "db:studio": "npx prisma studio --schema=./prisma/schema.prisma",
-    "db:generate": "npx prisma generate --schema=./prisma/schema.prisma",
-    "postinstall": "npm run db:generate"
+    "db:generate": "npx prisma generate --schema=./prisma/schema.prisma"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",
