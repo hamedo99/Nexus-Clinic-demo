@@ -11,7 +11,7 @@ export async function fetchBookingConfig() {
         });
 
         const configMap: Record<string, any> = {};
-        settings.forEach(s => configMap[s.key] = s.value);
+        settings.forEach((s: any) => configMap[s.key] = s.value);
 
         return {
             workingHours: configMap["working_hours"] || { start: 14, end: 21 },
