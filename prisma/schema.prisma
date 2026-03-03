@@ -53,6 +53,7 @@ enum SubscriptionStatus {
 model Doctor {
   id          String   @id @default(uuid())
   name        String
+  doctor_name_en  String?
   specialty   String
   address     String?
   slug        String   @unique
