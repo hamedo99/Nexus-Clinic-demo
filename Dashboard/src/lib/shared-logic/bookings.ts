@@ -117,7 +117,7 @@ export async function fetchMonthAvailability(
         });
 
         const fullyBookedDates: string[] = [];
-        Object.keys(dailyCounts).forEach(day => {
+        Object.keys(dailyCounts).forEach((day: any) => {
             let isFull = true;
             for (let h = (workingHours?.start || 14); h < (workingHours?.end || 21); h++) {
                 const count = bookedSlots[day]?.[h] || 0;
@@ -130,7 +130,7 @@ export async function fetchMonthAvailability(
         });
 
         const fullSlots: Record<string, number[]> = {};
-        Object.keys(bookedSlots).forEach(day => {
+        Object.keys(bookedSlots).forEach((day: any) => {
             fullSlots[day] = [];
             for (let h = (workingHours?.start || 14); h < (workingHours?.end || 21); h++) {
                 if ((bookedSlots[day][h] || 0) >= (patientsPerHour || 4)) {
@@ -140,7 +140,7 @@ export async function fetchMonthAvailability(
         });
 
         return {
-            blockedPeriods: blockedTimes.map(b => ({ start: b.startTime, end: b.endTime, reason: b.reason })),
+            blockedPeriods: blockedTimes.map((b: any) => ({ start: b.startTime, end: b.endTime, reason: b.reason })),
             fullyBookedDates,
             fullSlots,
             exactBookedSlots,
