@@ -103,7 +103,7 @@ export async function fetchMonthAvailability(
         const dailyCounts: Record<string, number> = {};
         const exactBookedSlots: Record<string, string[]> = {};
 
-        appointments.forEach(app => {
+        appointments.forEach((app: any) => {
             const date = new Date(app.startTime);
             const year = date.getFullYear();
             const monthStr = String(date.getMonth() + 1).padStart(2, '0');
