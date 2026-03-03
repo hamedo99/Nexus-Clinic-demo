@@ -70,7 +70,6 @@ model Doctor {
   // Profile Management Module Fields
   profile_image_path    String?
   doctor_name           String?
-  doctor_name_en        String?  // Doctor Name in English
   specialty_title       String?
   years_of_experience   Int?     @default(0)
   Maps_url              String?
