@@ -1,6 +1,9 @@
 {
     "name": "nexus-clinic",
     "private": true,
+    "scripts": {
+        "postinstall": "npx prisma generate"
+    },
     "workspaces": [
         "Dashboard",
         "Patient-App",
