@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build ",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:push": "npx prisma db push --schema=./prisma/schema.prisma",
@@ -32,9 +32,9 @@
     "react-dom": "^19.2.3",
     "react-hot-toast": "^2.6.0",
     "react-is": "^19.0.0",
+    "recharts": "^3.7.0",
     "swr": "^2.4.0",
     "tailwind-merge": "^3.4.0",
-    "use-debounce": "^10.1.0",
     "uuid": "^13.0.0",
     "zustand": "^5.0.11"
   },
@@ -52,6 +52,7 @@
     "typescript": "^5"
   },
   "prisma": {
-    "schema": "./prisma/schema.prisma"
+    "schema": "./prisma/schema.prisma",
+    "seed": "npx tsx prisma/seed.ts"
   }
 }

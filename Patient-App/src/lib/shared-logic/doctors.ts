@@ -18,13 +18,15 @@ export async function fetchDoctorBySlug(slug: string) {
                 workingHours: true,
                 consultationPrice: true,
                 doctor_name: true,
+                doctor_name_en: true,
                 specialty_title: true,
                 years_of_experience: true,
                 Maps_url: true,
                 profile_image_path: true,
                 certificates_list: true,
                 working_hours_schedule: true,
-                patientsPerHour: true
+                patientsPerHour: true,
+                clinic_locations: true
             }
         });
     } catch (error) {

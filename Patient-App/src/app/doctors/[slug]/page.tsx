@@ -89,6 +89,7 @@ export default async function DoctorProfilePage({ params }: { params: Promise<{ 
     const DOCTOR_DATA = {
         id: doctor.id,
         nameAr: doctor.doctor_name || doctor.name || "لا يوجد اسم",
+        nameEn: doctor.doctor_name_en || "Dr.",
         titleAr: doctor.specialty_title || doctor.specialty || "لا يوجد تخصص",
         bioAr: doctor.specialty_title ? `أخصائي ${doctor.specialty_title} مع خبرة تزيد عن ${doctor.years_of_experience || 0} سنوات في رعاية المرضى.` : "",
         image: resolveMediaPath(doctor.profile_image_path),
@@ -104,7 +105,8 @@ export default async function DoctorProfilePage({ params }: { params: Promise<{ 
         workingHours: (doctor.workingHours as any) || globalConfig.workingHours,
         patientsPerHour: doctor.patientsPerHour || globalConfig.patientsPerHour,
         consultationPrice: doctor.consultationPrice || globalConfig.consultationPrice,
-        slotDuration: globalConfig.slotDuration
+        slotDuration: globalConfig.slotDuration,
+        clinic_locations: doctor.clinic_locations ? JSON.parse(JSON.stringify(doctor.clinic_locations)) : []
     };
 
     return (

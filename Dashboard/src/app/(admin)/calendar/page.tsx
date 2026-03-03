@@ -1,5 +1,7 @@
-import { CalendarClient } from "@/components/calendar-client";
+import { UpcomingAppointmentsClient } from "@/components/upcoming-appointments-client";
+import { getUpcomingAppointments } from "@/lib/actions/dashboard";
 
 export default async function CalendarPage() {
-    return <CalendarClient />;
+    const data = await getUpcomingAppointments();
+    return <UpcomingAppointmentsClient initialData={data} />;
 }

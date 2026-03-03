@@ -161,12 +161,16 @@ export async function getAllSettings() {
                     consultationPrice: true,
                     patientsPerHour: true,
                     doctor_name: true,
+                    doctor_name_en: true,
                     specialty_title: true,
                     years_of_experience: true,
                     Maps_url: true,
                     profile_image_path: true,
                     certificates_list: true,
-                    working_hours_schedule: true
+                    working_hours_schedule: true,
+                    disabledDaysOfWeek: true,
+                    clinic_locations: true,
+                    updatedAt: true
                 }
             })
         ]);

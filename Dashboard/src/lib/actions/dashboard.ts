@@ -123,27 +123,56 @@ export async function getDashboardStats(filterDoctorId?: string, currentSession?
 }
 
 /**
- * Fetches appointments for the calendar view.
+ * Fetches upcoming appointments (strictly > end of today) and doctor's clinic locations for the upcoming table.
  */
-export async function getCalendarAppointments() {
+export async function getUpcomingAppointments() {
     noStore();
     try {
         const session = await getSession() as any;
-        if (!session) return [];
+        if (!session) return { appointments: [], locations: [], isAdmin: false };
 
-        const doctorFilter = session.role === "ADMIN" ? {} : { doctorId: session.doctorId };
-        const startOfMonth = new Date();
-        startOfMonth.setMonth(startOfMonth.getMonth() - 1);
+        const isAdmin = session.role === "ADMIN";
+        const doctorFilter = isAdmin ? {} : { doctorId: session.doctorId };
 
-        return await prisma.appointment.findMany({
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999);
+
+        // Fetch upcoming appointments
+        const appointments = await prisma.appointment.findMany({
             where: {
                 ...doctorFilter,
                 status: { in: ["PENDING", "CONFIRMED"] },
-                startTime: { gte: startOfMonth }
+                startTime: { gt: endOfToday }
             },
             include: { patient: true },
+            orderBy: { startTime: 'asc' }
         });
+
+        // Fetch locations for filter
+        let locations: string[] = [];
+        if (!isAdmin && session.doctorId) {
+            const doc = await prisma.doctor.findUnique({
+                where: { id: session.doctorId },
+                select: { clinic_locations: true }
+            });
+            if (doc?.clinic_locations && Array.isArray(doc.clinic_locations)) {
+                locations = doc.clinic_locations.map((loc: any) => loc.name).filter(Boolean);
+            }
+        } else if (isAdmin) {
+            const docs = await prisma.doctor.findMany({
+                select: { clinic_locations: true }
+            });
+            const allLocs = new Set<string>();
+            docs.forEach(d => {
+                if (d.clinic_locations && Array.isArray(d.clinic_locations)) {
+                    d.clinic_locations.forEach((l: any) => { if (l.name) allLocs.add(l.name); });
+                }
+            });
+            locations = Array.from(allLocs);
+        }
+
+        return { appointments, locations, isAdmin };
     } catch (error) {
-        return [];
+        return { appointments: [], locations: [], isAdmin: false };
     }
 }

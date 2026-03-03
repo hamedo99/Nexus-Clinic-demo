@@ -8,94 +8,66 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-enum Role {
-  ADMIN
-  DOCTOR
-  SECRETARY
-}
-
-enum AppointmentStatus {
-  PENDING
-  CONFIRMED
-  CANCELLED
-  COMPLETED
-  NO_SHOW
-}
-
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   password  String   @default("password123")
   name      String?
   role      Role     @default(SECRETARY)
-  
   doctorId  String?
-  doctor    Doctor?  @relation(fields: [doctorId], references: [id])
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  doctor    Doctor?  @relation(fields: [doctorId], references: [id])
 
   @@map("users")
 }
 
-enum SubscriptionStatus {
-  ACTIVE
-  EXPIRED
-  TRIAL
-  DISABLED
-}
-
 model Doctor {
-  id          String   @id @default(uuid())
-  name        String
-  specialty   String
-  address     String?
-  slug        String   @unique
-  subscriptionStatus SubscriptionStatus @default(TRIAL)
-  
-  consultationPrice Int?     @default(25000)
-  patientsPerHour   Int?     @default(4)
-  clinicPhone       String?
-  clinicLogo        String?
-  workingHours      Json?
-  
-  profile_image_path    String?
-  doctor_name           String?
-  specialty_title       String?
-  years_of_experience   Int?     @default(0)
-  Maps_url              String?
-  certificates_list     Json?
+  id                     String             @id @default(uuid())
+  name                   String
+  specialty              String
+  slug                   String             @unique
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  address                String?
+  subscriptionStatus     SubscriptionStatus @default(TRIAL)
+  clinicLogo             String?
+  clinicPhone            String?
+  consultationPrice      Int?               @default(25000)
+  patientsPerHour        Int?               @default(4)
+  workingHours           Json?
+  Maps_url               String?
+  certificates_list      Json?
+  doctor_name            String?
+  doctor_name_en         String?
+  profile_image_path     String?
+  specialty_title        String?
   working_hours_schedule Json?
-  disabledDaysOfWeek    Int[]    @default([5])
-  clinic_locations      Json?    @default("[]")
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  users       User[]
-  patients    Patient[]
-  appointments Appointment[]
-  blockedTimes BlockedTime[]
+  years_of_experience    Int?               @default(0)
+  disabledDaysOfWeek     Int[]              @default([5])
+  clinic_locations       Json?
+  appointments           Appointment[]
+  blockedTimes           BlockedTime[]
+  patients               Patient[]
+  users                  User[]
 
   @@index([createdAt])
   @@map("doctors")
 }
 
 model Patient {
-  id          String        @id @default(uuid())
-  fullName    String
-  phoneNumber String        @unique
-  birthDate   DateTime?
-  gender      String?
-  address     String?
-  notes       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  doctorId    String?
-  doctor      Doctor?       @relation(fields: [doctorId], references: [id])
-  
+  id           String        @id @default(uuid())
+  fullName     String
+  phoneNumber  String        @unique
+  birthDate    DateTime?
+  gender       String?
+  address      String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  doctorId     String?
   appointments Appointment[]
+  doctor       Doctor?       @relation(fields: [doctorId], references: [id])
 
   @@index([doctorId])
   @@index([createdAt])
@@ -104,22 +76,19 @@ model Patient {
 }
 
 model Appointment {
-  id          String            @id @default(uuid())
-  patientId   String
-  patient     Patient           @relation(fields: [patientId], references: [id])
-  
-  doctorId    String?
-  doctor      Doctor?           @relation(fields: [doctorId], references: [id])
-
-  startTime   DateTime
-  endTime     DateTime
-  status      AppointmentStatus @default(PENDING)
+  id             String            @id @default(uuid())
+  patientId      String
+  doctorId       String?
+  startTime      DateTime
+  endTime        DateTime
+  status         AppointmentStatus @default(PENDING)
+  notes          String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  isLocked       Boolean           @default(false)
   clinicLocation String?
-  notes       String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  
-  isLocked    Boolean           @default(false) 
+  doctor         Doctor?           @relation(fields: [doctorId], references: [id])
+  patient        Patient           @relation(fields: [patientId], references: [id])
 
   @@index([doctorId, startTime])
   @@index([doctorId, status, startTime])
@@ -140,17 +109,36 @@ model Setting {
 }
 
 model BlockedTime {
-  id          String   @id @default(uuid())
-  startTime   DateTime
-  endTime     DateTime
-  reason      String?
-  
-  doctorId    String?
-  doctor      Doctor?  @relation(fields: [doctorId], references: [id])
-  
-  createdAt   DateTime @default(now())
+  id        String   @id @default(uuid())
+  startTime DateTime
+  endTime   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+  doctorId  String?
+  doctor    Doctor?  @relation(fields: [doctorId], references: [id])
 
   @@index([startTime, endTime])
   @@index([doctorId])
   @@map("blocked_time")
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  SECRETARY
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  TRIAL
+  DISABLED
 }

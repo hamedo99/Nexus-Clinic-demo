@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function main() {
-    const doctors = await prisma.doctors.findMany({ select: { id: true, slug: true, name: true, doctor_name: true } });
+    const doctors = await prisma.doctor.findMany({ select: { id: true, slug: true, name: true, doctor_name: true } });
 
     if (doctors.length === 0) {
         console.log("No doctors found in the database.");

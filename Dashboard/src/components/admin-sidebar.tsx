@@ -16,7 +16,7 @@ export function SidebarContent({ role, onNavItemClick }: { role?: string; onNavI
                     <h1 className="text-2xl font-bold text-primary group-hover:text-primary/80 transition-colors">NexusClinic</h1>
                     <p className="text-xs text-muted-foreground mt-1">نظام إدارة العيادة</p>
                 </Link>
-                {role && <span className="text-[10px] uppercase font-bold text-gray-400">{role}</span>}
+                {role && <span className="text-[10px] uppercase font-bold text-gray-400">{role === "ADMIN" ? "المدير" : "الاستقبال"}</span>}
             </div>
 
             <nav className="flex-1 p-4 space-y-2">
@@ -27,7 +27,7 @@ export function SidebarContent({ role, onNavItemClick }: { role?: string; onNavI
                 )}
 
                 <NavLink href="/patients" icon={<Users size={20} />} label="سجل المرضى" active={pathname === "/patients"} onClick={onNavItemClick} />
-                <NavLink href="/calendar" icon={<Calendar size={20} />} label="التقويم" active={pathname === "/calendar"} onClick={onNavItemClick} />
+                <NavLink href="/calendar" icon={<Calendar size={20} />} label="المواعيد القادمة" active={pathname === "/calendar"} onClick={onNavItemClick} />
                 <NavLink href="/settings" icon={<Settings size={20} />} label="الإعدادات" active={pathname === "/settings"} onClick={onNavItemClick} />
             </nav>
 
@@ -48,7 +48,7 @@ export function SidebarContent({ role, onNavItemClick }: { role?: string; onNavI
 
 export function AdminSidebar({ role }: { role?: string }) {
     return (
-        <aside className="w-64 border-l border-gray-100 dark:border-gray-800 hidden md:flex flex-col h-full bg-white dark:bg-gray-800 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10 transition-all duration-300 relative">
+        <aside className="w-64 flex-shrink-0 border-l border-gray-100 dark:border-gray-800 hidden md:flex flex-col h-full bg-white dark:bg-gray-800 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10 transition-all duration-300 relative">
             <SidebarContent role={role} />
         </aside>
     );

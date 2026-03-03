@@ -83,7 +83,8 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
         workingHours: { start: 10, end: 24 }, // 10 AM - 12 AM
         patientsPerHour: 1,
         consultationPrice: 25000,
-        slotDuration: 60
+        slotDuration: 60,
+        clinic_locations: [] as any[]
     };
 
     const activeConfig = config || defaultConfig;
@@ -134,7 +135,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
         if (availability.disabledDaysOfWeek.includes(day.getDay())) return true;
 
         // NEW: Check if doctor works at this location on this day
-        if (selectedLocation) {
+        if (selectedLocation && availability.schedule && availability.schedule.length > 0) {
             const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
             const selectedDayName = dayNames[day.getDay()];
             const hasLocationThisDay = availability.schedule.some(s => s.location === selectedLocation && s.day === selectedDayName);
@@ -152,7 +153,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
         }
 
         return false;
-    }, [availability]);
+    }, [availability, selectedLocation]);
 
     // Dynamically generate time slots based on location schedule
     const timeSlots = React.useMemo(() => {
@@ -261,9 +262,9 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
     }, [formData]);
 
     const handleNext = React.useCallback(async () => {
-        if (step === 1 && date) {
+        if (step === 1 && selectedLocation) {
             setStep(2)
-        } else if (step === 2 && selectedLocation) {
+        } else if (step === 2 && date) {
             setStep(3)
         } else if (step === 3 && selectedTime) {
             setStep(4)
@@ -329,30 +330,148 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
             return <div className="w-full min-h-[400px] flex items-center justify-center"><div className="animate-pulse bg-slate-800/20 w-full h-[400px] rounded-[32px]"></div></div>;
         }
 
+        const displayDate = date ? format(date, 'EEEE، d MMMM yyyy', { locale: arSA }) : '';
+        const displayTime = selectedTime ? selectedTime.replace('AM', 'صباحاً').replace('PM', 'مساءً') : '';
+
         return (
             <div className="w-full relative">
                 {/* Stepper */}
-                <div className="flex justify-center items-center py-6 sticky top-0 z-30 backdrop-blur-xl md:backdrop-blur-none rounded-b-2xl mb-4">
-                    <div className="flex items-center gap-3 md:gap-6 bg-[#0f172a]/90 p-2 md:p-3 rounded-full border border-slate-800 shadow-xl backdrop-blur-md">
-                        {steps.map((s, idx) => (
-                            <div key={s} className="flex items-center">
-                                <div className={cn("w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center text-sm md:text-base font-bold transition-all duration-500 border relative",
-                                    step === s ? "bg-cyan-600 border-cyan-400 text-white shadow-[0_0_20px_rgba(8,145,178,0.5)] scale-110 z-10" : step > s ? "bg-cyan-900/30 border-cyan-800 text-cyan-400" : "bg-slate-800/50 border-slate-700 text-slate-600")}>
-                                    {step > s ? <Check className="w-5 h-5 md:w-6 md:h-6" /> : s}
-                                </div>
-                                {idx < steps.length - 1 && <div className={cn("w-6 md:w-10 h-0.5 mx-1 transition-colors duration-500", step > s ? "bg-cyan-800" : "bg-slate-800")} />}
-                            </div>
-                        ))}
+                <div className="flex justify-center items-center py-6 mb-8 w-full">
+                    <div className="flex items-center w-full max-w-[360px] px-2" dir="rtl">
+                        {steps.map((s, idx) => {
+                            const isActive = step === s;
+                            const isPast = step > s;
+                            return (
+                                <React.Fragment key={s}>
+                                    <div className={cn(
+                                        "w-[38px] h-[38px] md:w-[44px] md:h-[44px] shrink-0 rounded-full flex items-center justify-center text-sm md:text-[15px] font-medium transition-all duration-500 border bg-[#0f172a] relative z-10",
+                                        isActive
+                                            ? "border-[#06b6d4] text-[#06b6d4] shadow-[0_0_15px_rgba(6,182,212,0.3)] ring-1 ring-[#06b6d4]/20"
+                                            : isPast
+                                                ? "border-[#06b6d4]/40 text-[#06b6d4]/80"
+                                                : "border-slate-800/80 text-slate-500"
+                                    )}>
+                                        {isPast ? <Check className="w-4 h-4 md:w-5 md:h-5 text-[#06b6d4]" /> : s}
+                                    </div>
+                                    {idx < steps.length - 1 && (
+                                        <div className={cn("flex-1 h-px transition-colors duration-500 w-full min-w-[12px] -mx-1 relative z-0", isPast ? "bg-[#06b6d4]/40" : "bg-slate-800/80")} />
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
                     </div>
                 </div>
 
                 {/* Content Area */}
                 <div className="min-h-[400px] relative">
-                    {/* Step 1: Date Selection */}
+                    {/* Step 1: Location Selection */}
                     {step === 1 && (
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-500 w-full">
+                            <div className="text-center space-y-2 mb-10">
+                                <span className="text-cyan-400 text-sm font-bold uppercase tracking-widest">{doctorName || "عيادة نكسس الكبرى"}</span>
+                                <h3 className="text-3xl font-black text-white">اختر موقع العيادة</h3>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto pb-10">
+                                {(() => {
+                                    // Use activeConfig for 0ms server-rendered locations
+                                    const dbLocations = activeConfig.clinic_locations && activeConfig.clinic_locations.length > 0 ? activeConfig.clinic_locations : (availability.clinic_locations || []);
+                                    const scheduleLocations = Array.from(new Set(availability.schedule.map(s => s.location)));
+
+                                    // Use database locations if they exist, otherwise fallback to schedule locations
+                                    const locationsToDisplay = dbLocations.length > 0
+                                        ? dbLocations
+                                        : scheduleLocations.map(name => ({ name }));
+
+                                    return locationsToDisplay.map((locDetails: any, idx: number) => {
+                                        const locName = locDetails.name || locDetails;
+                                        return (
+                                            <div
+                                                role="button"
+                                                tabIndex={0}
+                                                key={idx}
+                                                onClick={() => {
+                                                    setSelectedLocation(locName as string);
+                                                    setStep(2);
+                                                    setDate(undefined);
+                                                    setSelectedTime(null);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' || e.key === ' ') {
+                                                        e.preventDefault();
+                                                        setSelectedLocation(locName as string);
+                                                        setStep(2);
+                                                        setDate(undefined);
+                                                        setSelectedTime(null);
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "group relative p-6 rounded-[32px] border-2 transition-all duration-500 text-right overflow-hidden flex flex-col gap-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-500/50",
+                                                    selectedLocation === locName
+                                                        ? "bg-cyan-600 border-cyan-400 shadow-[0_20px_40px_-15px_rgba(8,145,178,0.4)] scale-[1.02]"
+                                                        : "bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-800/60 hover:scale-[1.01]"
+                                                )}
+                                                dir="rtl"
+                                            >
+                                                <div className="relative z-10 flex items-start justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className={cn(
+                                                            "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors duration-500 shrink-0",
+                                                            selectedLocation === locName ? "bg-white/20 text-white" : "bg-cyan-900/30 text-cyan-400"
+                                                        )}>
+                                                            <Building2 className="w-6 h-6" />
+                                                        </div>
+                                                        <div className="space-y-1 text-right border-r-0">
+                                                            <h4 className={cn("text-xl font-black whitespace-nowrap", selectedLocation === locName ? "text-white" : "text-slate-200")}>{locName as string}</h4>
+                                                            <p className={cn("text-xs font-medium", selectedLocation === locName ? "text-white/70" : "text-slate-500")}>
+                                                                {locDetails?.address || "فرع العيادة"}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Map Pin Button */}
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            window.open(`https://maps.google.com/?q=${encodeURIComponent(locName as string)}`, '_blank');
+                                                        }}
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/40 hover:bg-cyan-900/40 border border-slate-700/50 hover:border-cyan-500/50 transition-all duration-300 group/pin backdrop-blur-sm shadow-[0_4px_10px_rgba(0,0,0,0.1)] shrink-0 mt-1"
+                                                    >
+                                                        <MapPin className="w-3.5 h-3.5 text-cyan-400 group-hover/pin:text-cyan-300" />
+                                                        <span className="text-[10px] font-bold text-slate-300 group-hover/pin:text-cyan-300 whitespace-nowrap">عرض الموقع</span>
+                                                    </button>
+                                                </div>
+
+                                                {locDetails?.phone && (
+                                                    <div className={cn("relative z-10 pt-4 border-t", selectedLocation === locName ? "border-white/10" : "border-slate-800")}>
+                                                        <div className="flex items-center gap-2 justify-start text-sm">
+                                                            <Phone className={cn("w-4 h-4 shrink-0", selectedLocation === locName ? "text-white/70" : "text-slate-500")} />
+                                                            <span className={cn(selectedLocation === locName ? "text-white/90" : "text-slate-400")}>{locDetails.phone}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {selectedLocation === locName && (
+                                                    <div className="absolute top-0 right-0 w-1.5 h-full bg-white/30" />
+                                                )}
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                                {activeConfig.clinic_locations?.length === 0 && availability.clinic_locations?.length === 0 && availability.schedule?.length === 0 && (
+                                    <div className="col-span-full py-20 text-center">
+                                        <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4" />
+                                        <p className="text-slate-400">لا توجد مواقع عمل مسجلة حالياً</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 2: Date Selection */}
+                    {step === 2 && (
                         <div className="animate-in fade-in slide-in-from-left-8 duration-500 w-full space-y-6 max-w-2xl mx-auto">
                             <div className="text-center space-y-2 mb-8">
-                                <span className="text-cyan-400 text-sm font-bold uppercase tracking-widest">{doctorName || "عيادة نكسس الكبرى"}</span>
+                                <span className="text-cyan-400 text-sm font-bold uppercase tracking-widest">{selectedLocation}</span>
                                 <h3 className="text-3xl font-black text-white">اختر تاريخ الموعد</h3>
                             </div>
 
@@ -365,87 +484,23 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                     </div>
                                     <h3 className="text-lg font-bold text-slate-200 capitalize w-full text-right pr-4 tracking-wide">{currentMonth ? format(currentMonth, 'MMMM yyyy', { locale: arSA }) : ''}</h3>
                                 </div>
-                                <Calendar mode="single" selected={date} onSelect={(d) => { setDate(d); if (d) setStep(2); }} month={currentMonth || new Date()} onMonthChange={setCurrentMonth} locale={arSA} className="p-0 pointer-events-auto rounded-md border-0 w-full calendar-ltr font-sans"
+                                <Calendar mode="single" selected={date} onSelect={(d) => { setDate(d); if (d) setStep(3); }} month={currentMonth || new Date()} onMonthChange={setCurrentMonth} locale={arSA} className="p-0 pointer-events-auto rounded-md border-0 w-full calendar-ltr font-sans relative z-10"
                                     disabled={isDateDisabled}
                                     classNames={{ months: "w-full", month: "space-y-4 w-full", caption: "hidden", table: "w-full border-collapse space-y-2", weekdays: "flex justify-between w-full mb-4 px-2", weekday: "text-slate-500 rounded-md w-10 font-bold text-[0.75rem] uppercase tracking-wider", week: "flex w-full mt-2 justify-between px-2", day: "h-11 w-11 p-0 font-medium text-slate-400 aria-selected:opacity-100 hover:text-white hover:bg-slate-800 rounded-full transition-all flex items-center justify-center relative", selected: "bg-cyan-600 text-white hover:bg-cyan-600 hover:text-white shadow-lg shadow-cyan-900/50 font-bold scale-110 z-10", today: "text-cyan-400 font-bold relative after:content-[''] after:absolute after:bottom-1 after:left-1/2 after:-translate-x-1/2 after:w-1 after:h-1 after:bg-cyan-400 after:rounded-full", outside: "text-slate-800 opacity-20", disabled: "text-slate-500 bg-slate-800/40 opacity-50 selection:bg-transparent hover:bg-transparent cursor-not-allowed", hidden: "invisible" }}
                                 />
-                            </Card>
-                        </div>
-                    )}
 
-                    {/* Step 2: Location Selection */}
-                    {step === 2 && (
-                        <div className="animate-in fade-in slide-in-from-right-8 duration-500 w-full">
-                            <div className="text-center space-y-2 mb-10">
-                                <span className="text-cyan-400 text-sm font-bold uppercase tracking-widest">{date && format(date, 'EEEE, d MMMM', { locale: arSA })}</span>
-                                <h3 className="text-3xl font-black text-white">اختر موقع العيادة</h3>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto pb-10">
-                                {(() => {
-                                    const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-                                    const selectedDayName = dayNames[date?.getDay() || 0];
-                                    const availableLocNames = Array.from(new Set(availability.schedule.filter(s => s.day === selectedDayName).map(s => s.location)));
-
-                                    return availableLocNames.map((loc) => {
-                                        const locDetails = availability.clinic_locations?.find(l => l.name === loc);
-                                        return (
-                                            <button
-                                                key={loc as string}
-                                                onClick={() => {
-                                                    setSelectedLocation(loc as string);
-                                                    setStep(3);
-                                                }}
-                                                className={cn(
-                                                    "group relative p-6 rounded-[32px] border-2 transition-all duration-500 text-right overflow-hidden flex flex-col gap-4",
-                                                    selectedLocation === loc
-                                                        ? "bg-cyan-600 border-cyan-400 shadow-[0_20px_40px_-15px_rgba(8,145,178,0.4)] scale-[1.02]"
-                                                        : "bg-slate-900/40 border-slate-800 hover:border-slate-700 hover:bg-slate-800/60 hover:scale-[1.01]"
-                                                )}
-                                            >
-                                                <div className="relative z-10 flex items-center justify-between">
-                                                    <div className={cn(
-                                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors duration-500 shrink-0",
-                                                        selectedLocation === loc ? "bg-white/20 text-white" : "bg-cyan-900/30 text-cyan-400"
-                                                    )}>
-                                                        <Building2 className="w-6 h-6" />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <h4 className={cn("text-xl font-black", selectedLocation === loc ? "text-white" : "text-slate-200")}>{loc as string}</h4>
-                                                        <p className={cn("text-xs font-medium", selectedLocation === loc ? "text-white/70" : "text-slate-500")}>الموقع متاح في هذا اليوم</p>
-                                                    </div>
-                                                </div>
-
-                                                {(locDetails?.address || locDetails?.phone) && (
-                                                    <div className={cn("relative z-10 pt-4 border-t", selectedLocation === loc ? "border-white/10" : "border-slate-800")}>
-                                                        {locDetails.address && (
-                                                            <div className="flex items-center gap-2 justify-end text-sm mb-1">
-                                                                <span className={cn(selectedLocation === loc ? "text-white/90" : "text-slate-400")}>{locDetails.address}</span>
-                                                                <MapPin className={cn("w-4 h-4", selectedLocation === loc ? "text-white/70" : "text-slate-500")} />
-                                                            </div>
-                                                        )}
-                                                        {locDetails.phone && (
-                                                            <div className="flex items-center gap-2 justify-end text-sm">
-                                                                <span className={cn(selectedLocation === loc ? "text-white/90" : "text-slate-400")}>{locDetails.phone}</span>
-                                                                <Phone className={cn("w-4 h-4", selectedLocation === loc ? "text-white/70" : "text-slate-500")} />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {selectedLocation === loc && (
-                                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-white/30" />
-                                                )}
-                                            </button>
-                                        );
-                                    });
-                                })()}
-                                {availability.schedule.length === 0 && !isLoadingAvailability && (
-                                    <div className="col-span-full py-20 text-center">
-                                        <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4" />
-                                        <p className="text-slate-400">لا توجد مواقع عمل مسجلة لهذا اليوم</p>
+                                {/* Calendar Legend */}
+                                <div className="w-full flex justify-center items-center gap-6 mt-6 pt-5 border-t border-slate-800/50" dir="rtl">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)]"></div>
+                                        <span className="text-xs text-slate-400 font-medium">يوم متاح للحجز</span>
                                     </div>
-                                )}
-                            </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-full bg-slate-700/80"></div>
+                                        <span className="text-xs text-slate-400 font-medium">الطبيب غير متواجد</span>
+                                    </div>
+                                </div>
+                            </Card>
                         </div>
                     )}
 
@@ -543,14 +598,13 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                 <div className="relative overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/20 p-5 opacity-60 cursor-not-allowed flex items-center justify-between grayscale">
                                     <div className="flex items-center gap-4"><div className="p-3 rounded-xl bg-slate-800 text-slate-500"><CreditCard className="w-6 h-6" /></div><div className="text-right"><h4 className="font-bold text-lg text-slate-400">الدفع الإلكتروني (زين كاش)</h4><p className="text-sm text-slate-500">غير متاح حالياً</p></div></div>
                                 </div>
-                                <div className="text-center"><span className="inline-block px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-500 text-xs font-medium">✨ احصل على 50 نقطة مكافأة عند الدفع الإلكتروني (قريباً)</span></div>
                             </div>
                             <Card className="glass-effect border-0 p-6 rounded-[24px] bg-slate-900/60 backdrop-blur-md shadow-xl ring-1 ring-white/5 mt-6">
                                 <h4 className="text-slate-400 text-sm mb-4 font-bold border-b border-slate-800 pb-2">ملخص الحجز</h4>
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center group"><span className="text-white font-medium group-hover:text-cyan-400 transition-colors">{formData.name}</span><span className="text-slate-500 text-sm">اسم المريض</span></div>
-                                    <div className="flex justify-between items-center group"><span className="text-white font-mono text-sm">{date && format(date, 'yyyy-MM-dd')}</span><span className="text-slate-500 text-sm">التاريخ</span></div>
-                                    <div className="flex justify-between items-center group"><span className="text-white font-mono text-sm bg-slate-800 px-2 py-0.5 rounded text-xs">{selectedTime}</span><span className="text-slate-500 text-sm">الوقت</span></div>
+                                    <div className="flex justify-between items-center group"><span className="text-white font-medium text-sm">{displayDate}</span><span className="text-slate-500 text-sm">التاريخ</span></div>
+                                    <div className="flex justify-between items-center group"><span className="text-cyan-400 font-bold text-sm bg-cyan-950/40 border border-cyan-800/50 px-3 py-1 rounded-lg">{displayTime}</span><span className="text-slate-500 text-sm">الوقت</span></div>
                                     <div className="flex justify-between items-center pt-4 border-t border-slate-800/50 mt-2"><span className="text-xl font-bold text-cyan-400">{activeConfig.consultationPrice.toLocaleString()} د.ع</span><span className="text-slate-400">المجموع</span></div>
                                 </div>
                             </Card>
@@ -588,11 +642,11 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                         <div className="grid grid-cols-2 gap-4 border-b border-slate-800/50 pb-3">
                                             <div className="text-right">
                                                 <span className="text-slate-500 text-[10px] flex items-center gap-1 justify-end mb-1">الوقت <Clock className="w-3 h-3" /></span>
-                                                <span className="text-white font-mono font-bold text-sm bg-slate-800 px-2 py-0.5 rounded">{selectedTime}</span>
+                                                <span className="text-cyan-400 font-bold text-sm bg-cyan-950/40 border border-cyan-800/50 px-2 py-0.5 rounded">{displayTime}</span>
                                             </div>
                                             <div className="text-right">
                                                 <span className="text-slate-500 text-[10px] flex items-center gap-1 justify-end mb-1">التاريخ <CalendarIcon className="w-3 h-3" /></span>
-                                                <span className="text-white font-mono font-bold text-sm">{date && format(date, 'yyyy-MM-dd')}</span>
+                                                <span className="text-white font-medium text-sm">{displayDate}</span>
                                             </div>
                                         </div>
                                         <div className="flex justify-between items-center border-b border-slate-800/50 pb-3">
@@ -632,8 +686,8 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                             const text = `*تأكيد حجز موعد - عيادة نكسس*\n\n` +
                                                 `👤 *المريض:* ${formData.name}\n` +
                                                 `👨‍⚕️ *الطبيب:* ${doctorName || "المناوب"}\n` +
-                                                `📅 *التاريخ:* ${date && format(date, 'yyyy-MM-dd')}\n` +
-                                                `⏰ *الوقت:* ${selectedTime}\n` +
+                                                `📅 *التاريخ:* ${displayDate}\n` +
+                                                `⏰ *الوقت:* ${displayTime}\n` +
                                                 `📞 *الهاتف:* ${formData.phone}\n` +
                                                 `💳 *طريقة الدفع:* ${paymentMethod === "cash" ? "نقداً في العيادة" : "إلكتروني"}\n\n` +
                                                 `_يرجى الحضور قبل الموعد بـ 10 دقائق._`;

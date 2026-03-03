@@ -42,7 +42,6 @@ export async function fetchMonthAvailability(
         workingHours?: { start: number, end: number };
         slotDuration?: number;
         disabledDaysOfWeek?: number[];
-        consultationPrice?: number;
     }
 ) {
     try {
@@ -91,7 +90,7 @@ export async function fetchMonthAvailability(
             }
         }
 
-        const { patientsPerHour, workingHours } = config;
+        const { patientsPerHour, workingHours } = config as any;
 
         const bookedSlots: Record<string, Record<string, number>> = {};
         const dailyCounts: Record<string, number> = {};
@@ -145,7 +144,7 @@ export async function fetchMonthAvailability(
             fullyBookedDates,
             fullSlots,
             exactBookedSlots,
-            disabledDaysOfWeek: config?.disabledDaysOfWeek || [5]
+            disabledDaysOfWeek: (config as any)?.disabledDaysOfWeek || [5]
         };
     } catch (error) {
         console.error("fetchMonthAvailability Error:", error);
@@ -161,8 +160,9 @@ export async function validateAndCreateBooking(data: {
     patientPhone: string;
     startTime: Date;
     doctorId?: string;
+    location?: string;
 }) {
-    const { patientName, patientPhone, startTime, doctorId } = data;
+    const { patientName, patientPhone, startTime, doctorId, location } = data;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -254,7 +254,8 @@ export async function validateAndCreateBooking(data: {
                 startTime,
                 endTime,
                 status: "PENDING",
-                doctorId: doctorId
+                doctorId: doctorId,
+                clinicLocation: location
             }
         });
 

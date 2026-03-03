@@ -42,6 +42,8 @@ export async function fetchMonthAvailability(
         workingHours?: { start: number, end: number };
         slotDuration?: number;
         disabledDaysOfWeek?: number[];
+        working_hours_schedule?: any;
+        clinic_locations?: any;
     }
 ) {
     try {
@@ -83,7 +85,9 @@ export async function fetchMonthAvailability(
                     patientsPerHour: doctor?.patientsPerHour || globalConfig.patientsPerHour,
                     workingHours: (doctor?.workingHours as any) || globalConfig.workingHours,
                     slotDuration: globalConfig.slotDuration,
-                    disabledDaysOfWeek: doctor?.disabledDaysOfWeek || [5]
+                    disabledDaysOfWeek: doctor?.disabledDaysOfWeek || [5],
+                    working_hours_schedule: doctor?.working_hours_schedule || null,
+                    clinic_locations: doctor?.clinic_locations || []
                 };
             } else {
                 config = { ...globalConfig, disabledDaysOfWeek: [5] };
