@@ -434,7 +434,13 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
-                                                            window.open(`https://maps.google.com/?q=${encodeURIComponent(locName as string)}`, '_blank');
+                                                            if (locDetails?.mapsUrl) {
+                                                                window.open(locDetails.mapsUrl, '_blank');
+                                                            } else if (locDetails?.lat && locDetails?.lng) {
+                                                                window.open(`https://www.google.com/maps/search/?api=1&query=${locDetails.lat},${locDetails.lng}`, '_blank');
+                                                            } else {
+                                                                window.open(`https://maps.google.com/?q=${encodeURIComponent(locName as string)}`, '_blank');
+                                                            }
                                                         }}
                                                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-950/40 hover:bg-cyan-900/40 border border-slate-700/50 hover:border-cyan-500/50 transition-all duration-300 group/pin backdrop-blur-sm shadow-[0_4px_10px_rgba(0,0,0,0.1)] shrink-0 mt-1"
                                                     >
