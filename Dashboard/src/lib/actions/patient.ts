@@ -8,38 +8,47 @@ import { ActionResponse } from "@/lib/types";
 /**
  * Searches and fetches patients based on query and doctor ownership.
  */
-export async function getPatients(query: string = "") {
+export async function getPatients(query: string = "", page: number = 1, limit: number = 10) {
     noStore();
     try {
         const session = await getSession() as any;
-        const doctorFilter = (session && session.role !== "ADMIN") ? { doctorId: session.doctorId } : {};
+        const doctorFilter = (session && session.role !== "ADMIN" && session.doctorId) ? { doctorId: session.doctorId } : {};
 
-        return await prisma.patient.findMany({
-            where: {
-                ...doctorFilter,
-                OR: [
-                    { fullName: { contains: query, mode: "insensitive" } },
-                    { phoneNumber: { contains: query } },
-                ],
-            },
-            select: {
-                id: true,
-                fullName: true,
-                phoneNumber: true,
-                createdAt: true,
-                appointments: {
-                    where: doctorFilter,
-                    select: { id: true, startTime: true, status: true },
-                    orderBy: { startTime: 'desc' },
-                    take: 1
-                }
-            },
-            orderBy: { createdAt: "desc" },
-            take: 50
-        });
+        const where = {
+            ...doctorFilter,
+            OR: query ? [
+                { fullName: { contains: query, mode: "insensitive" as any } },
+                { phoneNumber: { contains: query } },
+            ] : undefined,
+        };
+
+        const [patients, total] = await Promise.all([
+            prisma.patient.findMany({
+                where,
+                select: {
+                    id: true,
+                    fullName: true,
+                    phoneNumber: true,
+                    createdAt: true,
+                    _count: {
+                        select: { appointments: { where: doctorFilter } }
+                    }
+                },
+                orderBy: { createdAt: "desc" },
+                skip: (page - 1) * limit,
+                take: limit
+            }),
+            prisma.patient.count({ where })
+        ]);
+
+        return {
+            patients,
+            total,
+            pages: Math.ceil(total / limit)
+        };
     } catch (error) {
         console.error("Patients Fetch Error:", error);
-        return [];
+        return { patients: [], total: 0, pages: 0 };
     }
 }
 
@@ -66,5 +75,44 @@ export async function createPatient(prevState: any, formData: FormData): Promise
         return { success: true, data: patient };
     } catch (error) {
         return { success: false, message: "فشل في تسجيل المريض. قد يكون الرقم مسجلاً مسبقاً." };
+    }
+}
+
+/**
+ * Fetch a specific patient by ID along with their appointment history.
+ */
+export async function getPatientById(id: string) {
+    noStore();
+    try {
+        const session = await getSession() as any;
+        const doctorFilter = (session && session.role !== "ADMIN" && session.doctorId) ? { doctorId: session.doctorId } : {};
+
+        const patient = await prisma.patient.findUnique({
+            where: { id },
+            include: {
+                appointments: {
+                    where: doctorFilter,
+                    include: {
+                        doctor: { select: { name: true, specialty: true } }
+                    },
+                    orderBy: { startTime: 'desc' }
+                },
+                _count: {
+                    select: { appointments: { where: doctorFilter } }
+                }
+            }
+        });
+
+        if (!patient) return null;
+
+        // Ensure authorization
+        if (session.role !== "ADMIN" && patient.doctorId && patient.doctorId !== session.doctorId) {
+            return null; // Don't leak patients from other doctors if assigned explicitly
+        }
+
+        return patient;
+    } catch (error) {
+        console.error("Patient Fetch Error:", error);
+        return null;
     }
 }

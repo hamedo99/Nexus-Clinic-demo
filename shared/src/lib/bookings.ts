@@ -11,7 +11,7 @@ export async function fetchBookingConfig() {
         });
 
         const configMap: Record<string, any> = {};
-        settings.forEach(s => configMap[s.key] = s.value);
+        settings.forEach((s: any) => configMap[s.key] = s.value);
 
         return {
             workingHours: configMap["working_hours"] || { start: 14, end: 21 },
@@ -41,6 +41,8 @@ export async function fetchMonthAvailability(
         patientsPerHour?: number;
         workingHours?: { start: number, end: number };
         slotDuration?: number;
+        disabledDaysOfWeek?: number[];
+        consultationPrice?: number;
     }
 ) {
     try {
@@ -76,15 +78,16 @@ export async function fetchMonthAvailability(
             if (doctorId) {
                 const doctor = await prisma.doctor.findUnique({
                     where: { id: doctorId },
-                    select: { patientsPerHour: true, workingHours: true }
+                    select: { patientsPerHour: true, workingHours: true, disabledDaysOfWeek: true }
                 });
                 config = {
                     patientsPerHour: doctor?.patientsPerHour || globalConfig.patientsPerHour,
                     workingHours: (doctor?.workingHours as any) || globalConfig.workingHours,
-                    slotDuration: globalConfig.slotDuration
+                    slotDuration: globalConfig.slotDuration,
+                    disabledDaysOfWeek: doctor?.disabledDaysOfWeek || [5]
                 };
             } else {
-                config = globalConfig;
+                config = { ...globalConfig, disabledDaysOfWeek: [5] };
             }
         }
 
@@ -94,7 +97,7 @@ export async function fetchMonthAvailability(
         const dailyCounts: Record<string, number> = {};
         const exactBookedSlots: Record<string, string[]> = {};
 
-        appointments.forEach(app => {
+        appointments.forEach((app: any) => {
             const date = new Date(app.startTime);
             const year = date.getFullYear();
             const monthStr = String(date.getMonth() + 1).padStart(2, '0');
@@ -115,7 +118,7 @@ export async function fetchMonthAvailability(
         });
 
         const fullyBookedDates: string[] = [];
-        Object.keys(dailyCounts).forEach(day => {
+        Object.keys(dailyCounts).forEach((day: any) => {
             let isFull = true;
             for (let h = (workingHours?.start || 14); h < (workingHours?.end || 21); h++) {
                 const count = bookedSlots[day]?.[h] || 0;
@@ -128,7 +131,7 @@ export async function fetchMonthAvailability(
         });
 
         const fullSlots: Record<string, number[]> = {};
-        Object.keys(bookedSlots).forEach(day => {
+        Object.keys(bookedSlots).forEach((day: any) => {
             fullSlots[day] = [];
             for (let h = (workingHours?.start || 14); h < (workingHours?.end || 21); h++) {
                 if ((bookedSlots[day][h] || 0) >= (patientsPerHour || 4)) {
@@ -138,10 +141,11 @@ export async function fetchMonthAvailability(
         });
 
         return {
-            blockedPeriods: blockedTimes.map(b => ({ start: b.startTime, end: b.endTime, reason: b.reason })),
+            blockedPeriods: blockedTimes.map((b: any) => ({ start: b.startTime, end: b.endTime, reason: b.reason })),
             fullyBookedDates,
             fullSlots,
-            exactBookedSlots
+            exactBookedSlots,
+            disabledDaysOfWeek: (config as any).disabledDaysOfWeek || [5]
         };
     } catch (error) {
         console.error("fetchMonthAvailability Error:", error);
@@ -166,8 +170,8 @@ export async function validateAndCreateBooking(data: {
     const [statusResult, config, capacityCount, blocked, conflict, duplicate] = await Promise.all([
         // 0. Subscription Check
         doctorId
-            ? prisma.doctor.findUnique({ where: { id: doctorId }, select: { subscriptionStatus: true } })
-            : prisma.doctor.findFirst({ select: { subscriptionStatus: true } }),
+            ? prisma.doctor.findUnique({ where: { id: doctorId }, select: { subscriptionStatus: true, disabledDaysOfWeek: true } })
+            : prisma.doctor.findFirst({ select: { subscriptionStatus: true, disabledDaysOfWeek: true } }),
 
         // 1. Config Fetch
         fetchBookingConfig(),
@@ -229,6 +233,11 @@ export async function validateAndCreateBooking(data: {
 
     if (!isWithinWorkingHours(startTime, config.workingHours)) {
         return { success: false, message: "خارج ساعات العمل" };
+    }
+
+    const disabledDays = (statusResult as any)?.disabledDaysOfWeek || [5];
+    if (disabledDays.includes(startTime.getDay())) {
+        return { success: false, message: "عذراً، العيادة مغلقة في هذا اليوم بشكل دوري." };
     }
 
     if (capacityCount >= config.patientsPerHour) {

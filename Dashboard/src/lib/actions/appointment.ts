@@ -14,6 +14,7 @@ export async function createBooking(prevState: any, formData: FormData): Promise
     const dateStr = formData.get("date") as string;
     const timeStr = formData.get("time") as string;
     const doctorId = formData.get("doctorId") as string;
+    const location = formData.get("location") as string;
 
     if (!name || !phone || !dateStr || !doctorId || !timeStr) {
         return { success: false, error: "Validation error", message: "يرجى ملء جميع الحقول المطلوبة" };
@@ -27,7 +28,8 @@ export async function createBooking(prevState: any, formData: FormData): Promise
         patientName: name,
         patientPhone: phone,
         startTime,
-        doctorId
+        doctorId,
+        location
     });
 
     if (result.success) {
@@ -48,6 +50,7 @@ export async function updateAppointmentStatus(id: string, status: "CONFIRMED" | 
             data: { status }
         });
         revalidatePath("/dashboard");
+        revalidatePath("/calendar");
         return { success: true, data: null };
     } catch (error) {
         return { success: false, error: "Failed to update status" };
@@ -85,5 +88,51 @@ export async function rescheduleAppointment(id: string, dateStr: string, timeStr
         return { success: true, data: null };
     } catch (error) {
         return { success: false, error: "Error during rescheduling" };
+    }
+}
+
+/**
+ * Updates full details of an upcoming appointment
+ */
+export async function editUpcomingAppointment(id: string, payload: { dateStr: string, timeStr: string, status: string, location?: string }): Promise<ActionResponse> {
+    try {
+        const startTime = new Date(payload.dateStr);
+        const [hours, minutes] = payload.timeStr.split(":").map(Number);
+        startTime.setHours(hours, minutes, 0, 0);
+
+        await prisma.appointment.update({
+            where: { id },
+            data: {
+                startTime,
+                status: payload.status as any,
+                clinicLocation: payload.location || null
+            }
+        });
+
+        revalidatePath("/calendar");
+        return { success: true, data: null };
+    } catch (error) {
+        return { success: false, error: "Failed to update appointment" };
+    }
+}
+
+/**
+ * Get specific booking config for a doctor needed for the booking modal.
+ */
+export async function getDoctorBookingConfig(doctorId: string) {
+    if (!doctorId) return null;
+    try {
+        const doctor = await prisma.doctor.findUnique({
+            where: { id: doctorId },
+            select: {
+                id: true,
+                clinic_locations: true,
+                working_hours_schedule: true,
+                disabledDaysOfWeek: true
+            }
+        });
+        return doctor;
+    } catch (e) {
+        return null;
     }
 }

@@ -8,22 +8,11 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { getDashboardStats } from "@/lib/actions";
 
 // Sub-components
-import { DashboardHeader } from "./dashboard/dashboard-header";
-import { StatsGrid } from "./dashboard/stats-grid";
 import { AppointmentList } from "./dashboard/appointment-list";
-const BookingsChart = dynamic(() => import("./dashboard/bookings-chart").then(mod => mod.BookingsChart), {
-    ssr: false,
-    loading: () => <div className="h-48 w-full animate-pulse bg-gray-50 dark:bg-gray-800/50 rounded-2xl mt-8" />
-});
-
-const CalendarView = dynamic(() => import("@/components/calendar-view").then(mod => mod.CalendarView), {
-    ssr: false,
-    loading: () => (
-        <div className="h-full w-full flex items-center justify-center bg-gray-50 dark:bg-gray-900/50 animate-pulse">
-            <CalendarDays className="h-10 w-10 text-muted-foreground/30" />
-        </div>
-    )
-});
+import { NewAppointmentButton } from "@/components/new-appointment-button";
+import { Button } from "@/components/ui/button";
+import { ChevronRight, ChevronLeft } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 
 type DashboardData = Awaited<ReturnType<typeof getDashboardStats>>;
 
@@ -37,9 +26,17 @@ interface DashboardClientProps {
 
 export function DashboardClient({ initialData, role, userName, doctorId, allDoctors = [] }: DashboardClientProps) {
     const [selectedDoctorId, setSelectedDoctorId] = useState<string>("ALL");
+    const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
     const activeFilter = (role === "ADMIN" && selectedDoctorId !== "ALL") ? selectedDoctorId : undefined;
-    const { data: dashboardData, mutate, refresh, loading } = useDashboardData(initialData, activeFilter);
+
+    const isToday = new Date().setHours(0, 0, 0, 0) === new Date(currentDate).setHours(0, 0, 0, 0);
+    const dateParam = isToday ? undefined : currentDate.toISOString();
+
+    const searchParams = useSearchParams();
+    const searchQuery = searchParams.get("q")?.toString() || undefined;
+
+    const { data: dashboardData, mutate, refresh, loading } = useDashboardData(initialData, activeFilter, dateParam, searchQuery);
 
     const displayData = dashboardData || initialData;
 
@@ -54,7 +51,7 @@ export function DashboardClient({ initialData, role, userName, doctorId, allDoct
         );
     }
 
-    const { clinicStatus, appointments, stats, chartData } = displayData;
+    const { clinicStatus, appointments, stats } = displayData;
 
     const handleOptimisticStatusChange = useCallback((id: string, newStatus: "CONFIRMED" | "CANCELLED") => {
         const newData = { ...displayData };
@@ -95,63 +92,62 @@ export function DashboardClient({ initialData, role, userName, doctorId, allDoct
 
     return (
         <div className="space-y-4 md:space-y-8 p-1" dir="rtl">
-            <DashboardHeader
-                role={role}
-                userName={userName}
-                selectedDoctorId={selectedDoctorId}
-                setSelectedDoctorId={setSelectedDoctorId}
-                allDoctors={allDoctors}
-                loading={loading}
-                refresh={refresh}
-                onOptimisticCreate={handleOptimisticCreate}
-                doctorId={doctorId}
-            />
 
-            <StatsGrid stats={stats} clinicStatus={clinicStatus} />
-
-            <BookingsChart data={displayData.chartData} />
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8">
-                {/* Calendar View */}
-                <div className="lg:col-span-2 space-y-4 order-2 lg:order-1">
-                    <h2 className="text-xl font-semibold flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-primary" />
-                        الجدول الزمني {stats.isGlobal && "(جميع الأطباء)"}
-                    </h2>
-                    <Card className="border-none shadow-lg rounded-2xl overflow-hidden">
-                        <CardHeader className="bg-gray-50 dark:bg-gray-800/50 border-b p-4">
-                            <CardTitle className="text-base font-medium flex justify-between items-center">
-                                <span>عرض التقويم</span>
-                                <span className="text-xs font-normal text-muted-foreground bg-white dark:bg-gray-700 px-2 py-1 rounded-md border">
-                                    {stats.isGlobal ? "وضع الرقابة" : "ساعات العمل المجدولة"}
-                                </span>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="h-[500px] md:h-[600px] p-0 overflow-x-auto" dir="ltr">
-                            <div className="min-w-[500px] h-full">
-                                <CalendarView appointments={appointments} />
+            {/* 1. SOLID MASKING WRAPPER (This sticks and matches page background) */}
+            <div className="sticky top-16 z-40 bg-slate-50 dark:bg-gray-900 pt-4 -mt-4 pb-2 w-full transition-all">
+                {/* 2. THE ACTUAL WHITE CONTROL BAR CARD (No sticky classes here) */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700/50 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 max-w-5xl mx-auto shadow-md">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-4 text-xl font-bold">
+                            <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary transition-colors h-10 w-10 text-gray-500 dark:text-gray-400 rounded-full" onClick={() => setCurrentDate(prev => new Date(prev.setDate(prev.getDate() + 1)))}>
+                                <ChevronRight className="w-6 h-6" />
+                            </Button>
+                            <div className="text-xl md:text-2xl font-bold flex items-center gap-2 min-w-[150px] justify-center text-slate-800 dark:text-gray-100">
+                                {currentDate.toLocaleDateString("ar-EG", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                             </div>
-                        </CardContent>
-                    </Card>
-                </div>
+                            <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary transition-colors h-10 w-10 text-gray-500 dark:text-gray-400 rounded-full" onClick={() => setCurrentDate(prev => new Date(prev.setDate(prev.getDate() - 1)))}>
+                                <ChevronLeft className="w-6 h-6" />
+                            </Button>
+                        </div>
 
-                {/* Appointment List */}
-                <div className="lg:col-span-2 xl:col-span-1 space-y-4 order-1 lg:order-2">
-                    <h2 className="text-xl font-semibold flex items-center gap-2">
-                        <Users className="h-5 w-5 text-primary" />
-                        {stats.isGlobal ? "نظام التنسيق" : "أحدث المواعيد"}
-                    </h2>
-                    <Card className="border-none shadow-lg h-[500px] md:h-auto md:max-h-[665px] flex flex-col rounded-2xl overflow-hidden">
-                        <CardContent className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                            <AppointmentList
-                                appointments={appointments}
-                                isGlobal={stats.isGlobal}
-                                role={role}
-                                onStatusChange={handleOptimisticStatusChange}
-                            />
-                        </CardContent>
-                    </Card>
+                        <div className="flex flex-wrap items-center gap-3 pr-2">
+                            <span className="px-3 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300 border border-gray-200 dark:border-gray-800">
+                                📅 إجمالي المواعيد: {stats.todayTotal}
+                            </span>
+                            {stats.pending > 0 ? (
+                                <span className="px-3 py-1 rounded-md text-xs font-semibold bg-orange-50 text-orange-600 border border-orange-200 dark:bg-orange-500/10 dark:text-orange-400 dark:border-orange-800/50">
+                                    🔴 طلبات بانتظار التأكيد: {stats.pending}
+                                </span>
+                            ) : (
+                                <span className="px-3 py-1 rounded-md text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-800/50">
+                                    ✅ لا توجد طلبات معلقة
+                                </span>
+                            )}
+                        </div>
+                    </div>
+
+                    <NewAppointmentButton
+                        onOptimisticCreate={handleOptimisticCreate}
+                        allDoctors={allDoctors}
+                        role={role}
+                        doctorId={doctorId}
+                        customTrigger={
+                            <Button className="shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 rounded-xl bg-primary hover:bg-primary/95 text-white flex gap-2 items-center px-6 py-2.5 font-semibold shrink-0">
+                                <span>➕ حجز موعد جديد</span>
+                            </Button>
+                        }
+                    />
                 </div>
+            </div>
+
+            <div className="max-w-5xl mx-auto space-y-4">
+                <AppointmentList
+                    appointments={appointments}
+                    isGlobal={stats.isGlobal}
+                    role={role}
+                    searchQuery={searchQuery}
+                    onStatusChange={handleOptimisticStatusChange}
+                />
             </div>
         </div>
     );

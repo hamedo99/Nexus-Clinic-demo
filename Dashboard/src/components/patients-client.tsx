@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, UserPlus } from "lucide-react";
 import { useCachedData } from "@/hooks/use-cached-data";
-import { getPatients, createPatient } from "@/lib/actions";
+import { getPatientsAction, createPatientAction } from "@/features/patients/actions";
 import { useState, FormEvent, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -18,12 +18,12 @@ export function PatientsClient({ initialQuery }: { initialQuery: string }) {
     // We fetch based on 'query'.
     // Since 'getPatients' is a server action, check if we need to wrap it.
     // getPatients expects a string.
-    const fetcher = useCallback(() => getPatients(query), [query]);
+    const fetcher = useCallback(() => getPatientsAction(query), [query]);
 
-    const { data: patients, loading, mutate } = useCachedData(
+    const { data: patients, loading, mutate } = useCachedData<any[]>(
         `patients_${query}`,
         fetcher,
-        undefined
+        []
     );
 
     const [openDialog, setOpenDialog] = useState(false);
@@ -64,15 +64,11 @@ export function PatientsClient({ initialQuery }: { initialQuery: string }) {
         setOpenDialog(false); // Close immediately for snappiness
 
         try {
-            const res: any = await createPatient(null, formData);
+            const res: any = await createPatientAction(null, formData);
 
-            if (res.success && res.patient) {
-                // Determine if we should update the list or if the cache will refresh
-                // But replacing the temp item is good practice
-                // Fetch fresh data? Use 'refresh'?
-                // Creating a patient invalidates 'getPatients' but we are on client.
+            if (res.success && res.data) {
                 // We should manually update the cache with the real ID.
-                const realPatient = { ...res.patient, appointments: [] };
+                const realPatient = { ...res.data, appointments: [] };
                 const updatedList = [realPatient, ...currentList];
                 mutate(updatedList);
             } else {

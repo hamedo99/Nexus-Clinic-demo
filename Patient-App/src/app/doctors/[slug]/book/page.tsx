@@ -5,19 +5,7 @@ import { resolveMediaPath } from "@/lib/shared-logic/utils"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 
-export const revalidate = 3600;
-
-export async function generateStaticParams() {
-    try {
-        const doctors = await prisma.doctor.findMany({ select: { slug: true } });
-        return doctors.map((doc) => ({
-            slug: doc.slug,
-        }));
-    } catch (error) {
-        console.error("generateStaticParams Error:", error);
-        return [];
-    }
-}
+export const dynamic = 'force-dynamic';
 
 export default async function BookingPage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
@@ -48,7 +36,8 @@ export default async function BookingPage({ params }: { params: Promise<{ slug: 
         workingHours: (doctor.workingHours as any) || globalConfig.workingHours,
         patientsPerHour: doctor.patientsPerHour || globalConfig.patientsPerHour,
         consultationPrice: doctor.consultationPrice || globalConfig.consultationPrice,
-        slotDuration: globalConfig.slotDuration
+        slotDuration: globalConfig.slotDuration,
+        clinic_locations: doctor.clinic_locations ? JSON.parse(JSON.stringify(doctor.clinic_locations)) : []
     };
 
     // Pass the real doctor data and config to Client Component

@@ -7,10 +7,12 @@ import { BlockedDateManager } from "@/components/blocked-dates-manager";
 import { DoctorProfileForm } from "@/components/doctor-profile-form";
 import { useCachedData } from "@/hooks/use-cached-data";
 import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 export function SettingsClient({ role }: { role?: string }) {
+    const router = useRouter();
     const fetcher = useCallback(() => getAllSettings(), []);
-    const { data: settings, loading } = useCachedData("settings_all", fetcher);
+    const { data: settings, loading, refresh } = useCachedData("settings_all", fetcher);
 
     if (loading && !settings) {
         return (
@@ -38,7 +40,14 @@ export function SettingsClient({ role }: { role?: string }) {
             </div>
 
             {/* Unified Settings & Profile Form */}
-            <DoctorProfileForm doctor={(data as any).doctor} />
+            <DoctorProfileForm
+                key={(data as any).doctor?.id + String((data as any).doctor?.updatedAt)}
+                doctor={(data as any).doctor}
+                onUpdate={() => {
+                    refresh();
+                    router.refresh();
+                }}
+            />
 
             <div className="grid gap-6 md:grid-cols-2 mt-8">
                 {/* Security / System */}

@@ -31,8 +31,8 @@ const DoctorCard = memo(function DoctorCard({ doctor }: { doctor: DoctorData }) 
 
             {/* Text Content */}
             <div className="relative z-20 text-center pb-8 px-4">
-                <h3 className="text-white font-bold text-[22px] tracking-wide drop-shadow-md">Dr. Osama Al-Janabi</h3>
-                <p className="text-cyan-400 font-medium text-[15px] mt-1">Neurologist</p>
+                <h3 className="text-white font-bold text-[22px] tracking-wide drop-shadow-md">{doctor.nameEn || "Dr."}</h3>
+                {doctor.titleEn && <p className="text-cyan-400 font-medium text-[15px] mt-1">{doctor.titleEn}</p>}
             </div>
         </div>
     )

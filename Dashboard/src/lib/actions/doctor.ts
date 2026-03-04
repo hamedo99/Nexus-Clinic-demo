@@ -137,18 +137,17 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
         where: { id: effectiveDoctorId },
         select: {
             doctor_name: true,
+            doctor_name_en: true,
             name: true,
             specialty_title: true,
-            years_of_experience: true,
-            Maps_url: true,
             profile_image_path: true,
-            address: true,
             clinicPhone: true,
             consultationPrice: true,
             patientsPerHour: true,
             certificates_list: true,
             working_hours_schedule: true,
-            disabledDaysOfWeek: true
+            disabledDaysOfWeek: true,
+            clinic_locations: true
         }
     });
 
@@ -158,17 +157,14 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
 
     // Profile Fields (If value is null/empty in form, keep the current database value)
     const doctor_name = (formData.get("doctor_name") as string) || currentDoctor.doctor_name || currentDoctor.name;
+    const doctor_name_en = (formData.get("doctor_name_en") as string) || currentDoctor.doctor_name_en;
     const specialty_title = (formData.get("specialty_title") as string) || currentDoctor.specialty_title;
-    const yearsRaw = formData.get("years_of_experience");
-    const years_of_experience = (yearsRaw && yearsRaw !== "") ? parseInt(yearsRaw as string, 10) : currentDoctor.years_of_experience;
-    const Maps_url = (formData.get("Maps_url") as string) || currentDoctor.Maps_url;
     // This value is now a Supabase public URL provided by the frontend after a successful upload
     const profile_image_path = (formData.get("profile_image_path") as string) || currentDoctor.profile_image_path;
 
 
     // Clinic Fields
     const name = (formData.get("clinic_name") as string) || currentDoctor.name;
-    const address = (formData.get("address") as string) || currentDoctor.address;
     const clinicPhone = (formData.get("clinicPhone") as string) || currentDoctor.clinicPhone;
 
     const priceRaw = formData.get("consultationPrice");
@@ -227,16 +223,14 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
             data: {
                 // Profile
                 doctor_name,
+                doctor_name_en,
                 specialty_title,
-                years_of_experience,
-                Maps_url,
                 profile_image_path,
                 certificates_list: certificates_list as any,
                 working_hours_schedule: working_hours_schedule as any,
 
                 // Clinic settings
                 name, // Clinic name
-                address,
                 clinicPhone,
                 consultationPrice,
                 patientsPerHour,

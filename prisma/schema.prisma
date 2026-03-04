@@ -36,6 +36,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([email])
+  @@index([role])
+  @@index([doctorId])
   @@map("users")
 }
 
@@ -50,6 +53,7 @@ enum SubscriptionStatus {
 model Doctor {
   id          String   @id @default(uuid())
   name        String
+  doctor_name_en  String?
   specialty   String
   address     String?
   slug        String   @unique
@@ -61,6 +65,7 @@ model Doctor {
   clinicPhone       String?
   clinicLogo        String?
   workingHours      Json?    // Default: { start: 14, end: 21 }
+  disabledDaysOfWeek Int[]   @default([5])
   
   // Profile Management Module Fields
   profile_image_path    String?
@@ -70,6 +75,8 @@ model Doctor {
   Maps_url              String?
   certificates_list     Json?    // Array of certificates (JSON Array)
   working_hours_schedule Json?   // Working hours schedule (JSON)
+  clinic_locations      Json?    // Support multiple branch locations
+
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -80,6 +87,8 @@ model Doctor {
   blockedTimes BlockedTime[]
 
   @@index([createdAt])
+  @@index([slug])
+  @@index([subscriptionStatus])
   @@map("doctors")
 }
 
@@ -99,6 +108,7 @@ model Patient {
   
   appointments Appointment[]
 
+  @@index([phoneNumber])
   @@index([doctorId])
   @@index([createdAt])
   @@index([fullName])
@@ -117,6 +127,7 @@ model Appointment {
   endTime     DateTime
   status      AppointmentStatus @default(PENDING)
   notes       String?
+  clinicLocation String?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
   
@@ -128,6 +139,8 @@ model Appointment {
   @@index([startTime, status])
   @@index([patientId])
   @@index([doctorId])
+  @@index([status])
+  @@index([endTime])
   @@map("appointments")
 }
 

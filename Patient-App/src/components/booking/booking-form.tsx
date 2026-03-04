@@ -83,7 +83,8 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
         workingHours: { start: 10, end: 24 }, // 10 AM - 12 AM
         patientsPerHour: 1,
         consultationPrice: 25000,
-        slotDuration: 60
+        slotDuration: 60,
+        clinic_locations: [] as any[]
     };
 
     const activeConfig = config || defaultConfig;
@@ -134,7 +135,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
         if (availability.disabledDaysOfWeek.includes(day.getDay())) return true;
 
         // NEW: Check if doctor works at this location on this day
-        if (selectedLocation) {
+        if (selectedLocation && availability.schedule && availability.schedule.length > 0) {
             const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
             const selectedDayName = dayNames[day.getDay()];
             const hasLocationThisDay = availability.schedule.some(s => s.location === selectedLocation && s.day === selectedDayName);
@@ -152,7 +153,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
         }
 
         return false;
-    }, [availability]);
+    }, [availability, selectedLocation]);
 
     // Dynamically generate time slots based on location schedule
     const timeSlots = React.useMemo(() => {
@@ -372,8 +373,10 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto pb-10">
                                 {(() => {
-                                    // Fetch direct properties from the database (clinic_locations JSON)
-                                    const dbLocations = availability.clinic_locations || [];
+                                    if (isLoadingAvailability) return null;
+
+                                    // Use activeConfig for 0ms server-rendered locations
+                                    const dbLocations = activeConfig.clinic_locations && activeConfig.clinic_locations.length > 0 ? activeConfig.clinic_locations : (availability.clinic_locations || []);
                                     const scheduleLocations = Array.from(new Set(availability.schedule.map(s => s.location)));
 
                                     // Use database locations if they exist, otherwise fallback to schedule locations
@@ -421,7 +424,9 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                                         </div>
                                                         <div className="space-y-1 text-right border-r-0">
                                                             <h4 className={cn("text-xl font-black whitespace-nowrap", selectedLocation === locName ? "text-white" : "text-slate-200")}>{locName as string}</h4>
-                                                            <p className={cn("text-xs font-medium", selectedLocation === locName ? "text-white/70" : "text-slate-500")}>الموقع الأساسي</p>
+                                                            <p className={cn("text-xs font-medium", selectedLocation === locName ? "text-white/70" : "text-slate-500")}>
+                                                                {locDetails?.address || "فرع العيادة"}
+                                                            </p>
                                                         </div>
                                                     </div>
 
@@ -438,20 +443,12 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                                     </button>
                                                 </div>
 
-                                                {(locDetails?.address || locDetails?.phone) && (
+                                                {locDetails?.phone && (
                                                     <div className={cn("relative z-10 pt-4 border-t", selectedLocation === locName ? "border-white/10" : "border-slate-800")}>
-                                                        {locDetails.address && (
-                                                            <div className="flex items-center gap-2 justify-start text-sm mb-1">
-                                                                <MapPin className={cn("w-4 h-4 shrink-0", selectedLocation === locName ? "text-white/70" : "text-slate-500")} />
-                                                                <span className={cn(selectedLocation === locName ? "text-white/90" : "text-slate-400")}>{locDetails.address}</span>
-                                                            </div>
-                                                        )}
-                                                        {locDetails.phone && (
-                                                            <div className="flex items-center gap-2 justify-start text-sm">
-                                                                <Phone className={cn("w-4 h-4 shrink-0", selectedLocation === locName ? "text-white/70" : "text-slate-500")} />
-                                                                <span className={cn(selectedLocation === locName ? "text-white/90" : "text-slate-400")}>{locDetails.phone}</span>
-                                                            </div>
-                                                        )}
+                                                        <div className="flex items-center gap-2 justify-start text-sm">
+                                                            <Phone className={cn("w-4 h-4 shrink-0", selectedLocation === locName ? "text-white/70" : "text-slate-500")} />
+                                                            <span className={cn(selectedLocation === locName ? "text-white/90" : "text-slate-400")}>{locDetails.phone}</span>
+                                                        </div>
                                                     </div>
                                                 )}
 
@@ -462,12 +459,16 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                         );
                                     });
                                 })()}
-                                {availability.clinic_locations.length === 0 && availability.schedule.length === 0 && !isLoadingAvailability && (
+                                {isLoadingAvailability ? (
+                                    <div className="col-span-full py-20 flex justify-center items-center">
+                                        <Loader2 className="w-10 h-10 text-cyan-500 animate-spin" />
+                                    </div>
+                                ) : (activeConfig.clinic_locations?.length === 0 && availability.clinic_locations?.length === 0 && availability.schedule?.length === 0) ? (
                                     <div className="col-span-full py-20 text-center">
                                         <AlertCircle className="w-10 h-10 text-amber-500 mx-auto mb-4" />
                                         <p className="text-slate-400">لا توجد مواقع عمل مسجلة حالياً</p>
                                     </div>
-                                )}
+                                ) : null}
                             </div>
                         </div>
                     )}

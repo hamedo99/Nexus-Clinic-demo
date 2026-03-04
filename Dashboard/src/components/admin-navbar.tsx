@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { useDashboardStore } from "@/lib/store";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 export function AdminNavbar({ userName, role }: { userName?: string; role?: string }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -23,6 +24,27 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
     const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
     const notificationRef = useRef<HTMLDivElement>(null);
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const router = useRouter();
+    const [searchTerm, setSearchTerm] = useState(searchParams.get("q")?.toString() || "");
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            const params = new URLSearchParams(searchParams.toString());
+            if (searchTerm) {
+                params.set("q", searchTerm);
+            } else {
+                params.delete("q");
+            }
+            // Only replace if the parameter actually changed to avoid infinite loops
+            if (searchParams.get("q") !== params.get("q")) {
+                router.replace(`${pathname}?${params.toString()}`);
+            }
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [searchTerm, pathname, router, searchParams]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -43,7 +65,7 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
     }, [isNotificationsOpen]);
 
     return (
-        <header className="h-16 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-4 md:px-8 w-full">
+        <header className="h-16 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-800/80 backdrop-blur-md sticky top-0 z-50 flex items-center justify-between px-4 md:px-8 w-full">
             <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
                 {/* Mobile Menu Toggle */}
                 <div className="md:hidden">
@@ -59,14 +81,17 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
                         </SheetContent>
                     </Sheet>
                 </div>
-
-                <div className="relative w-full max-w-md hidden md:block">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                        placeholder="البحث عن مرضى، مواعيد..."
-                        className="pl-10 bg-gray-50 dark:bg-gray-900/50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-primary/20"
-                    />
-                </div>
+                {!pathname.includes('/settings') && (
+                    <div className="relative w-full max-w-md hidden md:block">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                            placeholder="البحث عن مرضى، مواعيد..."
+                            className="pl-10 bg-gray-50 dark:bg-gray-900/50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-primary/20"
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            value={searchTerm}
+                        />
+                    </div>
+                )}
             </div>
 
             <div className="flex items-center gap-2 md:gap-4 shrink-0">
@@ -169,7 +194,7 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
                             {userName || "المستخدم"}
                         </span>
                         <span className="text-[10px] text-primary font-bold uppercase tracking-wider">
-                            {role === "ADMIN" ? "المدير" : "طبيب"}
+                            {role === "ADMIN" ? "المدير" : "الاستقبال"}
                         </span>
                     </div>
                     <div className="h-9 w-9 bg-primary/10 text-primary rounded-full flex items-center justify-center font-bold border-2 border-primary/20 shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">

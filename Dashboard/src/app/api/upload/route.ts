@@ -5,8 +5,8 @@ import { createClient } from '@supabase/supabase-js';
 export async function POST(request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    // Service Role Key is required for server-side uploads to bypass RLS
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || "";
+    // Ensure we use the best available key for uploads (Service Role > Default Publishable > Anon)
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 
     if (!supabaseUrl || !supabaseKey) {
       console.error("Missing Supabase configuration");
@@ -30,8 +30,6 @@ export async function POST(request: NextRequest) {
         const urlParts = oldFileUrl.split('/');
         const fileName = urlParts[urlParts.length - 1];
         if (fileName) {
-          // Attempt to remove from the previous folder path if possible
-          // Note: In Supabase, the full path is needed. We assume same folder for cleanup.
           await supabase.storage
             .from('nexus_uploads')
             .remove([`${folder}/${fileName}`]);

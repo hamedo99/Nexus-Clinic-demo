@@ -6,7 +6,7 @@ import { getDashboardStats } from "@/lib/actions";
 import { useDashboardStore } from "@/lib/store";
 import { DashboardStats } from "@/lib/types";
 
-export function useDashboardData(initialData?: DashboardStats, filterDoctorId?: string) {
+export function useDashboardData(initialData?: DashboardStats, filterDoctorId?: string, selectedDate?: string, searchQuery?: string) {
     const key = filterDoctorId || 'ALL';
     const setData = useDashboardStore(state => state.setData);
 
@@ -19,10 +19,10 @@ export function useDashboardData(initialData?: DashboardStats, filterDoctorId?: 
 
     // Use SWR for fetching, caching, and revalidation
     const { data, error, mutate, isLoading } = useSWR(
-        ['dashboardStats', key],
-        async ([, doctorId]) => {
+        ['dashboardStats', key, selectedDate, searchQuery],
+        async ([, doctorId, date, query]) => {
             const id = doctorId === 'ALL' ? undefined : doctorId;
-            const newData = await getDashboardStats(id);
+            const newData = await getDashboardStats(id, undefined, date as string | undefined, query as string | undefined);
             if (newData) {
                 // Keep the global state synced for background tasks (reminders, notifications)
                 setData(doctorId, newData);
@@ -30,7 +30,7 @@ export function useDashboardData(initialData?: DashboardStats, filterDoctorId?: 
             return newData;
         },
         {
-            fallbackData: initialData,
+            fallbackData: !selectedDate ? initialData : undefined,
             refreshInterval: 60000, // 1 minute background automated polling
             revalidateOnFocus: true, // Fetch instantly when window gets focus
             revalidateIfStale: false,

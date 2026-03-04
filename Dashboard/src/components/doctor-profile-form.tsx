@@ -2,6 +2,7 @@
 
 import { useActionState, useState, useRef, useEffect } from "react";
 import { updateFullDoctorProfile } from "@/lib/actions/doctor";
+import { createClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,10 +11,19 @@ import { TimeSlotsManager } from "./time-slots-manager";
 import { CertificatesManager } from "./certificates-manager";
 import { LocationsManager, ClinicLocation } from "./locations-manager";
 
+type TabKey = "clinic" | "profile" | "locations" | "schedule";
+
+const TABS: { id: TabKey; label: string; icon: React.ElementType }[] = [
+    { id: "clinic", label: "إعدادات العيادة", icon: Building2 },
+    { id: "profile", label: "الملف الشخصي", icon: User },
+    { id: "locations", label: "فروع العيادة", icon: MapPin },
+    { id: "schedule", label: "الشهادات والأوقات", icon: Award },
+];
+
 export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?: () => void }) {
     const [state, formAction, isPending] = useActionState(updateFullDoctorProfile, null);
     const [showStatus, setShowStatus] = useState(false);
-    const [activeTab, setActiveTab] = useState<"clinic" | "profile" | "schedule" | "locations">("clinic");
+    const [activeTab, setActiveTab] = useState<TabKey>("clinic");
     const [isEditing, setIsEditing] = useState(false);
 
     // Dynamic Lists
@@ -37,27 +47,42 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
 
         setUploading(true);
         try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('folder', 'doctors_profiles');
-            if (profileImage) {
-                formData.append('oldFileUrl', profileImage);
-            }
+            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://snnriudqqwlphtnuhlex.supabase.co";
+            const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNubnJpdWRxcXdscGh0bnVobGV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA4MjM2MDEsImV4cCI6MjA4NjM5OTYwMX0.-NrqQKCUlBIuZRt5VAdHx2EjT1waSQQ1NlkhPUKj37k";
+            const supabase = createClient(supabaseUrl, supabaseKey);
 
+            const fileExtension = file.name.split('.').pop() || 'png';
+            // Fallback for crypto.randomUUID() in some browsers
+            const randomId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+            const uniqueFilename = `${randomId}.${fileExtension}`;
+            const filePath = `doctors_profiles/${uniqueFilename}`;
 
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
-            });
+            const { data, error } = await supabase.storage.from('nexus_uploads').upload(filePath, file);
 
-            const result = await response.json();
-            if (result.success) {
-                setProfileImage(result.filePath);
+            if (error) {
+                console.error('Upload failed:', error);
+                alert('فشل رفع الصورة: ' + error.message);
             } else {
-                console.error('Upload failed:', result.error);
+                // Delete old image from bucket if we have one
+                if (profileImage && profileImage.includes('nexus_uploads')) {
+                    try {
+                        const urlParts = profileImage.split('/nexus_uploads/');
+                        if (urlParts.length > 1) {
+                            const oldFilePath = urlParts[1];
+                            // Suppress errors if we fail to delete old, not critical to the user flow
+                            await supabase.storage.from('nexus_uploads').remove([oldFilePath]);
+                        }
+                    } catch (e) {
+                        console.warn('Silent failure removing old picture', e);
+                    }
+                }
+
+                const { data: publicUrlData } = supabase.storage.from('nexus_uploads').getPublicUrl(filePath);
+                setProfileImage(publicUrlData.publicUrl);
             }
         } catch (error) {
             console.error('Upload error:', error);
+            alert('حدث خطأ غير متوقع أثناء الرفع');
         } finally {
             setUploading(false);
         }
@@ -97,35 +122,20 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
 
             {/* Custom Tabs Navigation and Action Buttons */}
             <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4">
-                <div className="flex bg-slate-100 p-1 rounded-xl w-fit shadow-sm border border-slate-200">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("clinic")}
-                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "clinic" ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
-                    >
-                        <Building2 className="w-4 h-4" /> إعدادات العيادة
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("profile")}
-                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "profile" ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
-                    >
-                        <User className="w-4 h-4" /> الملف الشخصي
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("locations")}
-                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "locations" ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
-                    >
-                        <MapPin className="w-4 h-4" /> فروع العيادة
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("schedule")}
-                        className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all flex items-center gap-2 ${activeTab === "schedule" ? "bg-white text-teal-700 shadow-sm" : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"}`}
-                    >
-                        <Award className="w-4 h-4" /> الشهادات والأوقات
-                    </button>
+                <div className="flex flex-wrap bg-slate-100/90 p-1.5 rounded-2xl w-fit shadow-inner border border-slate-200/60 backdrop-blur-sm gap-1.5 transition-all">
+                    {TABS.map(({ id, label, icon: Icon }) => (
+                        <button
+                            key={id}
+                            type="button"
+                            onClick={() => setActiveTab(id)}
+                            className={`px-5 py-2.5 rounded-[14px] text-sm font-bold transition-all duration-300 flex items-center gap-2 ${activeTab === id
+                                ? "bg-white text-teal-700 shadow-[0_2px_15px_rgba(13,148,136,0.12)] ring-1 ring-slate-100 scale-[1.02]"
+                                : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
+                                }`}
+                        >
+                            <Icon className={`w-4 h-4 transition-colors ${activeTab === id ? 'text-teal-600' : 'text-slate-400'}`} /> {label}
+                        </button>
+                    ))}
                 </div>
 
                 <div>
@@ -175,7 +185,8 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                     name="clinic_name"
                                     defaultValue={doctor?.name || ""}
                                     placeholder="مثال: عيادة النور التخصصية"
-                                    className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500"
+                                    className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
+                                    disabled={!isEditing}
                                 />
                             </div>
                             <div className="space-y-2">
@@ -186,25 +197,13 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                         name="clinicPhone"
                                         defaultValue={doctor?.clinicPhone || ""}
                                         placeholder="+964 7XX XXX XXXX"
-                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10"
+                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
+                                        disabled={!isEditing}
                                     />
                                     <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                                 </div>
                             </div>
 
-                            <div className="space-y-2 md:col-span-2">
-                                <Label htmlFor="address" className="text-slate-700">العنوان الكامل</Label>
-                                <div className="relative">
-                                    <Input
-                                        id="address"
-                                        name="address"
-                                        defaultValue={doctor?.address || ""}
-                                        placeholder="مثال: بغداد، المنصور، شارع 14 رمضان"
-                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10"
-                                    />
-                                    <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                                </div>
-                            </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="consultationPrice" className="text-slate-700">سعر الكشفية (دينار عراقي)</Label>
@@ -214,7 +213,8 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                         name="consultationPrice"
                                         type="number"
                                         defaultValue={doctor?.consultationPrice ?? 25000}
-                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10"
+                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
+                                        disabled={!isEditing}
                                     />
                                     <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                                 </div>
@@ -228,7 +228,8 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                         name="patientsPerHour"
                                         type="number"
                                         defaultValue={doctor?.patientsPerHour ?? 4}
-                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10"
+                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
+                                        disabled={!isEditing}
                                     />
                                     <Users className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                                 </div>
@@ -236,24 +237,29 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                         </div>
 
                         {/* Weekly Day-off Toggle */}
-                        <div className="mt-8 p-6 rounded-[2rem] bg-slate-50 border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 group hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300">
-                            <div className="flex items-center gap-5 text-right">
-                                <div className={`p-4 rounded-2xl ${disableFridays ? 'bg-rose-100 text-rose-600' : 'bg-teal-100 text-teal-600'} transition-colors duration-500 shadow-sm shadow-inner`}>
-                                    <CalendarX className="w-8 h-8" />
+                        <div className="mt-10 p-6 md:p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-50 to-white border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6 group hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500 overflow-hidden relative">
+                            <div className="absolute -left-20 -top-20 w-48 h-48 bg-rose-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+                            <div className="flex items-center gap-6 text-right relative z-10 w-full md:w-auto">
+                                <div className={`p-4 rounded-[1.5rem] ${disableFridays ? 'bg-rose-100 text-rose-600 shadow-rose-200/50' : 'bg-slate-100 text-slate-500 shadow-slate-200/50'} transition-all duration-500 shadow-sm border border-white shrink-0`}>
+                                    <CalendarX className={`w-8 h-8 md:w-9 md:h-9 ${disableFridays ? 'scale-110' : 'scale-100'} transition-transform duration-500`} />
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="font-bold text-slate-900 text-xl tracking-tight">إغلاق العيادة يوم الجمعة دائمياً</p>
-                                    <p className="text-sm text-slate-500 font-medium">سيتم تعطيل كافة أيام الجمعة من تقويم الحجز للمرضى بشكل آلي.</p>
+                                <div className="space-y-1.5 flex-1 p-1">
+                                    <p className="font-black text-slate-800 text-xl md:text-2xl tracking-tight">إغلاق العيادة دائمياً يوم الجمعة</p>
+                                    <p className="text-sm md:text-base text-slate-500/80 font-semibold max-w-sm leading-relaxed">تُعطّل جميع أيام الجمعة من نظام المواعيد تلقائياً.</p>
                                 </div>
                             </div>
                             <button
                                 type="button"
                                 disabled={!isEditing}
                                 onClick={() => setDisableFridays(!disableFridays)}
-                                className={`relative inline-flex h-9 w-16 items-center rounded-full transition-all duration-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${disableFridays ? 'bg-rose-500 shadow-lg shadow-rose-200' : 'bg-slate-300'}`}
+                                className={`relative shrink-0 inline-flex h-9 w-16 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${disableFridays ? 'bg-rose-500 hover:bg-rose-600 shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 'bg-slate-300 hover:bg-slate-400'
+                                    } relative z-10`}
                             >
+                                <span className="sr-only">إغلاق العيادة الجمعة</span>
                                 <span
-                                    className={`inline-block h-7 w-7 transform rounded-full bg-white transition-transform duration-500 shadow-md ${disableFridays ? 'translate-x-8' : 'translate-x-1'}`}
+                                    aria-hidden="true"
+                                    className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${disableFridays ? '-translate-x-8' : 'translate-x-0'
+                                        }`}
                                 />
                             </button>
                         </div>
@@ -325,6 +331,19 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                 </div>
 
                                 <div className="space-y-2">
+                                    <Label htmlFor="doctor_name_en" className="text-slate-700">اسم الطبيب (باللغة الإنجليزية)</Label>
+                                    <Input
+                                        id="doctor_name_en"
+                                        name="doctor_name_en"
+                                        defaultValue={doctor?.doctor_name_en || ""}
+                                        placeholder="مثال: Dr. Ahmed Ali"
+                                        className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100 text-left"
+                                        disabled={!isEditing}
+                                        dir="ltr"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
                                     <Label htmlFor="specialty_title" className="text-slate-700">التخصص الدقيق</Label>
                                     <Input
                                         id="specialty_title"
@@ -336,35 +355,7 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="years_of_experience" className="text-slate-700">سنين الخبرة</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="years_of_experience"
-                                            name="years_of_experience"
-                                            type="number"
-                                            defaultValue={doctor?.years_of_experience ?? 0}
-                                            className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
-                                            disabled={!isEditing}
-                                        />
-                                        <Clock className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                                    </div>
-                                </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="Maps_url" className="text-slate-700">رابط خرائط جوجل</Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="Maps_url"
-                                            name="Maps_url"
-                                            defaultValue={doctor?.Maps_url || ""}
-                                            placeholder="https://maps.google.com/?q=..."
-                                            className="rounded-lg border-slate-200 focus:border-teal-500 focus:ring-teal-500 pl-10 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100"
-                                            disabled={!isEditing}
-                                        />
-                                        <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>

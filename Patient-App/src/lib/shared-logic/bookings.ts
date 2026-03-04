@@ -11,7 +11,7 @@ export async function fetchBookingConfig() {
         });
 
         const configMap: Record<string, any> = {};
-        settings.forEach(s => configMap[s.key] = s.value);
+        settings.forEach((s: any) => configMap[s.key] = s.value);
 
         return {
             workingHours: { start: 10, end: 24 },
@@ -103,7 +103,7 @@ export async function fetchMonthAvailability(
         const dailyCounts: Record<string, number> = {};
         const exactBookedSlots: Record<string, string[]> = {};
 
-        appointments.forEach(app => {
+        appointments.forEach((app: any) => {
             const date = new Date(app.startTime);
             const year = date.getFullYear();
             const monthStr = String(date.getMonth() + 1).padStart(2, '0');
@@ -124,7 +124,7 @@ export async function fetchMonthAvailability(
         });
 
         const fullyBookedDates: string[] = [];
-        Object.keys(dailyCounts).forEach(day => {
+        Object.keys(dailyCounts).forEach((day: any) => {
             let isFull = true;
             for (let h = (workingHours?.start || 10); h < (workingHours?.end || 24); h++) {
                 const count = bookedSlots[day]?.[h] || 0;
@@ -137,7 +137,7 @@ export async function fetchMonthAvailability(
         });
 
         const fullSlots: Record<string, number[]> = {};
-        Object.keys(bookedSlots).forEach(day => {
+        Object.keys(bookedSlots).forEach((day: any) => {
             fullSlots[day] = [];
             for (let h = (workingHours?.start || 10); h < (workingHours?.end || 24); h++) {
                 if ((bookedSlots[day][h] || 0) >= (patientsPerHour || 1)) {
@@ -147,7 +147,7 @@ export async function fetchMonthAvailability(
         });
 
         return {
-            blockedPeriods: blockedTimes.map(b => ({ start: b.startTime, end: b.endTime, reason: b.reason })),
+            blockedPeriods: blockedTimes.map((b: any) => ({ start: b.startTime, end: b.endTime, reason: b.reason })),
             fullyBookedDates,
             fullSlots,
             exactBookedSlots,

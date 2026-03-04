@@ -8,7 +8,7 @@ import { resolveMediaPath } from "@/lib/shared-logic/utils"
 import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 
-export const revalidate = 3600; // ISR: Revalidate every hour
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
     const { slug } = await params;
@@ -60,17 +60,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     }
 }
 
-export async function generateStaticParams() {
-    try {
-        const doctors = await prisma.doctor.findMany({ select: { slug: true } });
-        return doctors.map((doc) => ({
-            slug: doc.slug,
-        }));
-    } catch (error) {
-        console.error("generateStaticParams Error:", error);
-        return [];
-    }
-}
+
 
 export default async function DoctorProfilePage({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;
@@ -89,6 +79,7 @@ export default async function DoctorProfilePage({ params }: { params: Promise<{ 
     const DOCTOR_DATA = {
         id: doctor.id,
         nameAr: doctor.doctor_name || doctor.name || "لا يوجد اسم",
+        nameEn: doctor.doctor_name_en || "Dr.",
         titleAr: doctor.specialty_title || doctor.specialty || "لا يوجد تخصص",
         bioAr: doctor.specialty_title ? `أخصائي ${doctor.specialty_title} مع خبرة تزيد عن ${doctor.years_of_experience || 0} سنوات في رعاية المرضى.` : "",
         image: resolveMediaPath(doctor.profile_image_path),
@@ -104,7 +95,8 @@ export default async function DoctorProfilePage({ params }: { params: Promise<{ 
         workingHours: (doctor.workingHours as any) || globalConfig.workingHours,
         patientsPerHour: doctor.patientsPerHour || globalConfig.patientsPerHour,
         consultationPrice: doctor.consultationPrice || globalConfig.consultationPrice,
-        slotDuration: globalConfig.slotDuration
+        slotDuration: globalConfig.slotDuration,
+        clinic_locations: doctor.clinic_locations ? JSON.parse(JSON.stringify(doctor.clinic_locations)) : []
     };
 
     return (

@@ -1,7 +1,9 @@
 export interface DoctorData {
     id: string;
     nameAr: string;
+    nameEn?: string;
     titleAr: string;
+    titleEn?: string;
     bioAr: string;
     image: string;
     yearsExperience: number;
@@ -16,6 +18,7 @@ export interface BookingConfig {
     patientsPerHour: number;
     consultationPrice: number;
     slotDuration: number;
+    clinic_locations?: any[];
 }
 
 export interface WorkingHours {

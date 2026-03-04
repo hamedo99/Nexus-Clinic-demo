@@ -4,22 +4,28 @@ import { getSession } from "@/lib/auth";
 import { Suspense } from "react";
 import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 
-export default function DashboardPage() {
+export default async function DashboardPage(props: { searchParams: Promise<{ q?: string }> }) {
+    const searchParams = await props.searchParams;
     return (
         <Suspense fallback={<DashboardSkeleton />}>
-            <DashboardContent />
+            <DashboardContent searchParams={searchParams} />
         </Suspense>
     );
 }
 
-async function DashboardContent() {
+async function DashboardContent({ searchParams }: { searchParams: { q?: string } }) {
     const session: any = await getSession();
+    const query = searchParams?.q || '';
 
     // Parallelize core data and supplementary doctor list
     const [data, doctors] = await Promise.all([
-        getDashboardStats(undefined, session),
+        getDashboardStats(undefined, session, undefined, query),
         session?.role === "ADMIN" ? getDoctorList() : Promise.resolve([])
     ]);
+
+    if (!data) {
+        throw new Error("Failed to fetch dashboard data");
+    }
 
     return (
         <DashboardClient
