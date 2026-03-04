@@ -112,13 +112,13 @@ export function LocationsManager({ value = [], onChange, isEditing = false }: Lo
                             </div>
 
                             <div className="space-y-2 md:col-span-2">
-                                <Label className="text-slate-600 text-xs">رابط Google Maps</Label>
+                                <Label className="text-slate-600 text-xs">رابط Google Maps المباشر (الرابط الدقيق للعيادة)</Label>
                                 <div className="relative">
                                     <Input
                                         value={loc.mapsUrl}
                                         onChange={(e) => updateLocation(loc.id, 'mapsUrl', e.target.value)}
                                         disabled={!isEditing}
-                                        placeholder="https://goo.gl/maps/..."
+                                        placeholder="الصق الرابط المباشر من جوجل ماب هنا (مثل https://goo.gl/maps/...)"
                                         className="bg-white border-slate-200 rounded-xl pl-10"
                                     />
                                     <LinkIcon className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
