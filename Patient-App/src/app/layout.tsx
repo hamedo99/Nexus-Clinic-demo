@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   title: 'حجز طبيب',
   description: 'منصة حجز المواعيد الطبية',
   verification: {
-    google: 'HL0RUuKf-JImCm1teDYTCGcEfLYc-QzyXSCXfUUXbas',
+    google: 'bbs-QYPKFVG2zOD31ydHjF-JQyGn0pEwKn8Z6jarn-Q',
   },
 }
 
