@@ -118,7 +118,7 @@ export async function getDashboardStats(filterDoctorId?: string, currentSession?
         };
     } catch (error) {
         console.error("Dashboard Stats Fetch Error:", error);
-        return null;
+        throw error; // Rethrow to let the UI / Error Boundary catch the actual error
     }
 }
 

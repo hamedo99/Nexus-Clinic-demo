@@ -17,23 +17,28 @@ async function DashboardContent({ searchParams }: { searchParams: { q?: string }
     const session: any = await getSession();
     const query = searchParams?.q || '';
 
-    // Parallelize core data and supplementary doctor list
-    const [data, doctors] = await Promise.all([
-        getDashboardStats(undefined, session, undefined, query),
-        session?.role === "ADMIN" ? getDoctorList() : Promise.resolve([])
-    ]);
+    try {
+        // Parallelize core data and supplementary doctor list
+        const [data, doctors] = await Promise.all([
+            getDashboardStats(undefined, session, undefined, query),
+            session?.role === "ADMIN" ? getDoctorList() : Promise.resolve([])
+        ]);
 
-    if (!data) {
+        if (!data) {
+            throw new Error("Data returned is undefined or null");
+        }
+
+        return (
+            <DashboardClient
+                initialData={data}
+                role={session?.role}
+                userName={session?.name}
+                doctorId={session?.doctorId}
+                allDoctors={doctors}
+            />
+        );
+    } catch (error) {
+        console.error("Dashboard Fetch Error:", error);
         throw new Error("Failed to fetch dashboard data");
     }
-
-    return (
-        <DashboardClient
-            initialData={data}
-            role={session?.role}
-            userName={session?.name}
-            doctorId={session?.doctorId}
-            allDoctors={doctors}
-        />
-    );
 }
