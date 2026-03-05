@@ -2,7 +2,7 @@
 import { memo } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Info, Award, GraduationCap, BookOpen } from "lucide-react"
+import { Info, Award, GraduationCap, BookOpen, Calendar } from "lucide-react"
 import { DoctorData } from "@/lib/shared-logic/types"
 
 const DoctorInfo = memo(function DoctorInfo({ doctor }: { doctor: DoctorData }) {
@@ -36,13 +36,23 @@ const DoctorInfo = memo(function DoctorInfo({ doctor }: { doctor: DoctorData }) 
                 </p>
             </div>
 
-            {/* Action Button: Info */}
-            <div className="w-full flex justify-center mt-4">
+            {/* Action Buttons: Book & Info */}
+            <div className="w-full flex justify-center items-center gap-3 mt-4 px-2">
+                <Button
+                    className="w-[50%] max-w-[160px] h-12 text-[15px] font-bold rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] hover:shadow-[0_0_30px_rgba(6,182,212,0.5)] transition-all flex items-center justify-center gap-2 group"
+                    onClick={() => {
+                        document.getElementById('booking-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }}
+                >
+                    <Calendar className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    <span>احجز موعد</span>
+                </Button>
+
                 <Dialog>
                     <DialogTrigger asChild>
-                        <Button variant="outline" className="w-[80%] max-w-[240px] h-12 text-sm font-medium rounded-2xl border-slate-700/50 bg-slate-800/20 text-slate-200 hover:bg-slate-800/40 hover:text-white flex items-center justify-center gap-3 group transition-all backdrop-blur-sm shadow-sm ring-1 ring-white/5">
+                        <Button variant="outline" className="w-[50%] max-w-[160px] h-12 text-sm font-medium rounded-2xl border-slate-700/50 bg-slate-800/20 text-slate-200 hover:bg-slate-800/40 hover:text-white flex items-center justify-center gap-2 transition-all backdrop-blur-sm shadow-sm ring-1 ring-white/5 group">
                             <BookOpen className="w-4 h-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
-                            <span>المعلومات والشهادات</span>
+                            <span>المعلومات</span>
                         </Button>
                     </DialogTrigger>
                     <DialogContent className="bg-slate-900/95 border-slate-800 text-white w-[95vw] sm:max-w-xl md:max-w-2xl max-h-[85vh] overflow-y-auto backdrop-blur-xl custom-scrollbar rounded-[32px] p-6 md:p-8" dir="rtl">

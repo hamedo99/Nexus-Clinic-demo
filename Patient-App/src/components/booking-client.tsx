@@ -23,7 +23,9 @@ export const BookingClient = memo(function BookingClient({ doctor, config }: { d
                 </div>
 
                 {/* Booking Wizard - Contains complex logic & state */}
-                <BookingForm config={config} doctorId={doctor.id} doctorName={doctor.nameAr} />
+                <div id="booking-section" className="scroll-mt-6">
+                    <BookingForm config={config} doctorId={doctor.id} doctorName={doctor.nameAr} />
+                </div>
 
             </div>
         </div>
