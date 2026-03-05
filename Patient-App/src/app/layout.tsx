@@ -12,6 +12,9 @@ const tajawal = Tajawal({
 export const metadata: Metadata = {
   title: 'حجز طبيب',
   description: 'منصة حجز المواعيد الطبية',
+  verification: {
+    google: 'HL0RUuKf-JImCm1teDYTCGcEfLYc-QzyXSCXfUUXbas',
+  },
 }
 
 export default function RootLayout({
