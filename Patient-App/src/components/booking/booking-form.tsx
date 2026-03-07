@@ -81,7 +81,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
     // Default config if not provided
     const defaultConfig = {
         workingHours: { start: 10, end: 24 }, // 10 AM - 12 AM
-        patientsPerHour: 1,
+        patientsPerHour: 4, // Falls back to 4 if doctor didn't configure it
         consultationPrice: 25000,
         slotDuration: 60,
         clinic_locations: [] as any[]
@@ -192,7 +192,11 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
 
                 const slotTimeStr24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
                 const slotBookingsCount = exactBooked.filter((t: string) => t === slotTimeStr24).length;
-                const isSlotExactBooked = slotBookingsCount >= (activeConfig.patientsPerHour || 1);
+
+                // Robust check for patientsPerHour Limit (Doctor Config > Global Config > 4)
+                const limit = activeConfig?.patientsPerHour ?? 4;
+                const isSlotExactBooked = slotBookingsCount >= limit;
+
                 const isHourFull = fullHours.includes(h);
                 const isPast = isToday && currentTime < now;
 
@@ -536,7 +540,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                 </div>
 
                                 <div className="mt-2 grid grid-cols-2 md:grid-cols-4 gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto max-h-[450px] pr-2 custom-scrollbar relative z-10" dir="ltr">
-                                    {timeSlots.map(({ time, disabled, isFull, isBooked }) => (
+                                    {timeSlots.map(({ time, disabled, isFull, isBooked, isPast }) => (
                                         <button
                                             key={time}
                                             onClick={() => {
@@ -546,14 +550,24 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                                 }
                                             }}
                                             disabled={disabled}
-                                            className={cn("min-h-[60px] w-full px-2 rounded-[20px] text-center text-base font-bold transition-all duration-300 border relative overflow-hidden group flex items-center justify-center",
-                                                disabled ?
-                                                    "opacity-40 cursor-not-allowed bg-slate-800/40 border-slate-700/50 text-slate-500 line-through decoration-slate-600"
-                                                    :
-                                                    selectedTime === time ? "bg-cyan-600 border-cyan-500 text-white shadow-lg shadow-cyan-900/30 scale-[1.05]" : "bg-slate-800/40 border-slate-700/50 text-slate-400 hover:bg-slate-700 hover:border-slate-500 hover:text-slate-200 hover:shadow-md")}
+                                            className={cn("min-h-[60px] md:min-h-[68px] w-full px-2 rounded-[20px] text-center transition-all duration-300 border relative overflow-hidden group flex flex-col items-center justify-center gap-1",
+                                                (isBooked || isFull) ?
+                                                    "cursor-not-allowed bg-rose-500/10 border-rose-500/20 text-rose-400/90 shadow-inner"
+                                                    : isPast ?
+                                                        "opacity-40 cursor-not-allowed bg-slate-800/40 border-slate-700/50 text-slate-500 line-through decoration-slate-600"
+                                                        : selectedTime === time ?
+                                                            "bg-cyan-600 border-cyan-500 text-white shadow-[0_0_20px_rgba(8,145,178,0.4)] scale-[1.05] ring-2 ring-cyan-400/50"
+                                                            : "bg-slate-800/40 border-slate-700/50 text-slate-300 hover:bg-slate-700 hover:border-slate-500 hover:text-white hover:shadow-md hover:scale-[1.02]"
+                                            )}
                                         >
-                                            <span className="relative z-10 font-sans tracking-widest block leading-none">{time}</span>
-                                            {selectedTime === time && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-[200%] translate-x-[-100%] animate-shimmer" />}
+                                            <span className="relative z-10 font-sans tracking-widest block leading-none text-base md:text-lg font-bold">{time}</span>
+
+                                            {/* Status Indicators */}
+                                            {(isBooked || isFull) && <span className="text-[10px] md:text-xs font-bold text-rose-500/90 bg-rose-500/10 px-2 py-0.5 rounded-full">مكتمل</span>}
+                                            {(!isBooked && !isFull && !isPast && selectedTime !== time) && <span className="text-[10px] md:text-xs font-medium text-cyan-500/70 group-hover:text-cyan-400 transition-colors">متاح للحجز</span>}
+                                            {(selectedTime === time) && <span className="text-[10px] md:text-xs font-bold text-cyan-100 bg-white/20 px-2 py-0.5 rounded-full">تم الاختيار</span>}
+
+                                            {selectedTime === time && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent w-[200%] translate-x-[-100%] animate-shimmer" />}
                                         </button>
                                     ))}
                                     {timeSlots.length === 0 && <div className="col-span-full text-center text-slate-500 py-10">لا توجد أوقات متاحة لهذا اليوم في هذا الموقع</div>}
@@ -710,7 +724,11 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                         <Share2 className="w-5 h-5" />
                                         مشاركة عبر واتساب
                                     </Button>
-                                    <Button variant="ghost" className="w-full h-12 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all" onClick={() => { handleReset(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                                    <Button variant="ghost" className="w-full h-12 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all font-bold" onClick={() => {
+                                        const path = window.location.pathname;
+                                        const doctorUrl = path.endsWith('/book') ? path.replace('/book', '') : path;
+                                        router.push(doctorUrl);
+                                    }}>
                                         العودة لصفحة الطبيب
                                     </Button>
                                 </div>

@@ -1,0 +1,44 @@
+2026/03/07-23:55:34.327 4214 Reusing MANIFEST C:\Users\user\Desktop\Nexus-Clinic\whatsapp-bot\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/03/07-23:55:34.328 4214 Recovering log #1127
+2026/03/07-23:55:34.374 4214 Reusing old log C:\Users\user\Desktop\Nexus-Clinic\whatsapp-bot\.wwebjs_auth\session\Default\IndexedDB\https_web.whatsapp.com_0.indexeddb.leveldb/001127.log 
+2026/03/07-23:55:39.935 f88 Level-0 table #1147: started
+2026/03/07-23:55:39.955 f88 Level-0 table #1147: 1094102 bytes OK
+2026/03/07-23:55:39.956 f88 Delete type=0 #1127
+2026/03/07-23:55:40.018 f88 Compacting 1@0 + 1@1 files
+2026/03/07-23:55:40.035 f88 Generated table #1148@0: 30238 keys, 472176 bytes
+2026/03/07-23:55:40.040 f88 Generated table #1149@0: 3552 keys, 121064 bytes
+2026/03/07-23:55:40.044 f88 Generated table #1150@0: 2254 keys, 35882 bytes
+2026/03/07-23:55:40.044 f88 Compacted 1@0 + 1@1 files => 629122 bytes
+2026/03/07-23:55:40.044 f88 compacted to: files[ 0 3 37 0 0 0 0 ]
+2026/03/07-23:55:40.045 f88 Delete type=2 #1131
+2026/03/07-23:55:40.045 f88 Delete type=2 #1147
+2026/03/07-23:55:40.165 f88 Compacting 1@1 + 7@2 files
+2026/03/07-23:55:40.181 f88 Generated table #1151@1: 798 keys, 2133381 bytes
+2026/03/07-23:55:40.219 f88 Generated table #1152@1: 24371 keys, 2199418 bytes
+2026/03/07-23:55:40.271 f88 Generated table #1153@1: 24310 keys, 2280439 bytes
+2026/03/07-23:55:40.316 f88 Generated table #1154@1: 24982 keys, 2276429 bytes
+2026/03/07-23:55:40.363 f88 Generated table #1155@1: 25503 keys, 2255085 bytes
+2026/03/07-23:55:40.396 f88 Generated table #1156@1: 27008 keys, 2255418 bytes
+2026/03/07-23:55:40.418 f88 Generated table #1157@1: 12868 keys, 1347375 bytes
+2026/03/07-23:55:40.418 f88 Compacted 1@1 + 7@2 files => 14747545 bytes
+2026/03/07-23:55:40.419 f88 compacted to: files[ 0 2 37 0 0 0 0 ]
+2026/03/07-23:55:40.420 f88 Delete type=2 #550
+2026/03/07-23:55:40.420 f88 Delete type=2 #926
+2026/03/07-23:55:40.420 f88 Delete type=2 #927
+2026/03/07-23:55:40.420 f88 Delete type=2 #928
+2026/03/07-23:55:40.420 f88 Delete type=2 #931
+2026/03/07-23:55:40.420 f88 Delete type=2 #1108
+2026/03/07-23:55:40.420 f88 Delete type=2 #1143
+2026/03/07-23:55:40.420 f88 Delete type=2 #1150
+2026/03/07-23:55:40.650 f88 Compacting 1@1 + 5@2 files
+2026/03/07-23:55:40.687 f88 Generated table #1158@1: 77596 keys, 2245694 bytes
+2026/03/07-23:55:40.726 f88 Generated table #1159@1: 49304 keys, 2210074 bytes
+2026/03/07-23:55:40.752 f88 Generated table #1160@1: 31166 keys, 1495135 bytes
+2026/03/07-23:55:40.752 f88 Compacted 1@1 + 5@2 files => 5950903 bytes
+2026/03/07-23:55:40.753 f88 compacted to: files[ 0 1 35 0 0 0 0 ]
+2026/03/07-23:55:40.753 f88 Delete type=2 #912
+2026/03/07-23:55:40.753 f88 Delete type=2 #913
+2026/03/07-23:55:40.753 f88 Delete type=2 #925
+2026/03/07-23:55:40.754 f88 Delete type=2 #1142
+2026/03/07-23:55:40.754 f88 Delete type=2 #1144
+2026/03/07-23:55:40.754 f88 Delete type=2 #1149

@@ -67,6 +67,10 @@ model Doctor {
   workingHours      Json?    // Default: { start: 14, end: 21 }
   disabledDaysOfWeek Int[]   @default([5])
   
+  // WhatsApp Notification Settings
+  is_reminders_enabled      Boolean  @default(false)
+  whatsapp_message_template String?
+  
   // Profile Management Module Fields
   profile_image_path    String?
   doctor_name           String?
@@ -133,6 +137,7 @@ model Appointment {
   
   // To handle conflicts/locking mechanism
   isLocked    Boolean           @default(false) 
+  reminder_sent Boolean         @default(false)
 
   @@index([doctorId, startTime])
   @@index([doctorId, status, startTime])

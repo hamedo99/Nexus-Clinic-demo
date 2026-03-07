@@ -147,7 +147,9 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
             certificates_list: true,
             working_hours_schedule: true,
             disabledDaysOfWeek: true,
-            clinic_locations: true
+            clinic_locations: true,
+            is_reminders_enabled: true,
+            whatsapp_message_template: true
         }
     });
 
@@ -198,6 +200,10 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
         clinic_locations = [];
     }
 
+    // WhatsApp Reminder Settings
+    const is_reminders_enabled = formData.get("is_reminders_enabled") === "true";
+    const whatsapp_message_template = formData.get("whatsapp_message_template") as string || currentDoctor.whatsapp_message_template;
+
     // Weekly Day-Off (Friday = 5)
     let disabledDaysOfWeek = currentDoctor.disabledDaysOfWeek || [5];
     const fridayDisabled = formData.get("disableFridays") === "true";
@@ -235,12 +241,14 @@ export async function updateFullDoctorProfile(prevState: any, formData: FormData
                 consultationPrice,
                 patientsPerHour,
                 disabledDaysOfWeek,
-                clinic_locations
+                clinic_locations,
+                is_reminders_enabled,
+                whatsapp_message_template
             }
         });
 
-        revalidatePath("/(admin)/settings", "page");
-        revalidatePath("/(admin)/doctor-profile", "page");
+        revalidatePath("/settings");
+        revalidatePath("/doctor-profile");
         revalidatePath("/", "layout");
 
         return { success: true, message: "تم التحديث بنجاح", data: updatedDoctor };
