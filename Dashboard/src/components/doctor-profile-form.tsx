@@ -20,6 +20,69 @@ const TABS: { id: TabKey; label: string; icon: React.ElementType }[] = [
     { id: "schedule", label: "الشهادات والأوقات", icon: Award },
 ];
 
+/**
+ * Reusable Premium UX Toggle Component
+ */
+const SettingToggle = ({
+    enabled,
+    onChange,
+    disabled,
+    title,
+    description,
+    icon: Icon,
+    activeColorClass = "green"
+}: {
+    enabled: boolean;
+    onChange: (val: boolean) => void;
+    disabled: boolean;
+    title: string;
+    description: string;
+    icon: React.ElementType | string;
+    activeColorClass?: "green" | "rose" | "cyan";
+}) => {
+    // Determine dynamic colors
+    const colors = {
+        green: { bg: "bg-green-100", text: "text-green-600", shadow: "shadow-green-200/50", toggleBg: "bg-green-500 hover:bg-green-600 shadow-[0_0_20px_rgba(34,197,94,0.3)]", container: "from-green-50 to-white border-green-100" },
+        rose: { bg: "bg-rose-100", text: "text-rose-600", shadow: "shadow-rose-200/50", toggleBg: "bg-rose-500 hover:bg-rose-600 shadow-[0_0_20px_rgba(244,63,94,0.3)]", container: "from-slate-50 to-white border-slate-100" },
+        cyan: { bg: "bg-cyan-100", text: "text-cyan-600", shadow: "shadow-cyan-200/50", toggleBg: "bg-cyan-500 hover:bg-cyan-600 shadow-[0_0_20px_rgba(6,182,212,0.3)]", container: "from-cyan-50 to-white border-cyan-100" }
+    };
+
+    const activeStyle = colors[activeColorClass];
+
+    return (
+        <div className={`mt-6 p-6 md:p-8 rounded-[2.5rem] bg-gradient-to-br ${enabled ? activeStyle.container : 'from-slate-50 to-white border-slate-100'} border flex flex-col md:flex-row items-center justify-between gap-6 group hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500 overflow-hidden relative shadow-sm`}>
+            {enabled && <div className={`absolute -left-20 -top-20 w-48 h-48 bg-${activeColorClass}-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none`} />}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 w-full">
+                <div className="flex items-center gap-6 text-right relative z-10 w-full md:w-auto">
+                    <div className={`p-4 rounded-[1.5rem] ${enabled ? `${activeStyle.bg} ${activeStyle.text} ${activeStyle.shadow}` : 'bg-slate-100 text-slate-500 shadow-slate-200/50'} transition-all duration-500 shadow-sm border border-white shrink-0`}>
+                        {typeof Icon === 'string' ? (
+                            <div dangerouslySetInnerHTML={{ __html: Icon }} className={`w-8 h-8 md:w-9 md:h-9 ${enabled ? 'scale-110' : 'scale-100'} transition-transform duration-500`} />
+                        ) : (
+                            <Icon className={`w-8 h-8 md:w-9 md:h-9 ${enabled ? 'scale-110' : 'scale-100'} transition-transform duration-500`} />
+                        )}
+                    </div>
+                    <div className="space-y-1.5 flex-1 p-1">
+                        <p className="font-black text-slate-800 text-xl md:text-2xl tracking-tight">{title}</p>
+                        <p className="text-sm md:text-base text-slate-500/80 font-semibold max-w-sm leading-relaxed">{description}</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onChange(!enabled)}
+                    className={`relative shrink-0 inline-flex h-10 w-[72px] cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-500 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed ${enabled ? activeStyle.toggleBg : 'bg-slate-300 hover:bg-slate-400'} relative z-10`}
+                >
+                    <span className="sr-only">{title}</span>
+                    <span
+                        aria-hidden="true"
+                        className={`pointer-events-none inline-block h-8 w-8 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${enabled ? '-translate-x-9' : 'translate-x-0'}`}
+                    />
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?: () => void }) {
     const [state, formAction, isPending] = useActionState(updateFullDoctorProfile, null);
     const [showStatus, setShowStatus] = useState(false);
@@ -36,10 +99,84 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
     const [workingHours, setWorkingHours] = useState(doctor.working_hours_schedule || { text: "" });
     const [disableFridays, setDisableFridays] = useState<boolean>((doctor.disabledDaysOfWeek || []).includes(5));
 
+    // WhatsApp Reminders state
+    const [isRemindersEnabled, setIsRemindersEnabled] = useState<boolean>(doctor.is_reminders_enabled || false);
+
+    // Sync state if doctor props change (server action refresh)
+    useEffect(() => {
+        if (doctor) {
+            setIsRemindersEnabled(doctor.is_reminders_enabled || false);
+            setDisableFridays((doctor.disabledDaysOfWeek || []).includes(5));
+            setTimeSlots(doctor.working_hours_schedule?.slots || []);
+            setLocations(doctor.clinic_locations || []);
+        }
+    }, [doctor]);
+
     // Profile Image
     const [profileImage, setProfileImage] = useState<string>(doctor.profile_image_path || "");
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // WhatsApp Bot UI State
+    const [botStatus, setBotStatus] = useState<{ isConnected: boolean, qrCode: string }>({ isConnected: false, qrCode: "" });
+    const [testPhone, setTestPhone] = useState("");
+    const [isSendingTest, setIsSendingTest] = useState(false);
+
+    // Polling WhatsApp API logic
+    useEffect(() => {
+        if (!isRemindersEnabled) return;
+
+        let interval: NodeJS.Timeout;
+
+        const checkStatus = async () => {
+            try {
+                // Poll WhatsApp Bot Server URL (uses env var or defaults to localhost:4000)
+                const botApiUrl = process.env.NEXT_PUBLIC_WHATSAPP_API_URL || "http://localhost:4000";
+                const res = await fetch(`${botApiUrl}/api/whatsapp/status`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setBotStatus(data);
+                }
+            } catch (e) {
+                // Ignore silent errors if bot is down
+                console.log("Bot server not reachable");
+            }
+        };
+
+        // Check immediately then every 3 seconds
+        checkStatus();
+        interval = setInterval(checkStatus, 3000);
+
+        return () => clearInterval(interval);
+    }, [isRemindersEnabled]);
+
+    const handleSendTest = async () => {
+        if (!testPhone || testPhone.length < 10) {
+            alert("الرجاء إدخال رقم هاتف صحيح");
+            return;
+        }
+
+        setIsSendingTest(true);
+        try {
+            const botApiUrl = process.env.NEXT_PUBLIC_WHATSAPP_API_URL || "http://localhost:4000";
+            const res = await fetch(`${botApiUrl}/api/whatsapp/test`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ phone: testPhone })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert("✅ " + data.message);
+                setTestPhone(""); // clear after success
+            } else {
+                alert("❌ " + data.message);
+            }
+        } catch (e) {
+            alert("❌ تعذر الاتصال بالخادم الداخلي لإرسال الرسالة.");
+        } finally {
+            setIsSendingTest(false);
+        }
+    };
 
     const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -118,6 +255,7 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
             <input type="hidden" name="working_hours_schedule" value={JSON.stringify({ ...workingHours, slots: timeSlots })} />
             <input type="hidden" name="profile_image_path" value={profileImage || ""} />
             <input type="hidden" name="disableFridays" value={String(disableFridays)} />
+            <input type="hidden" name="is_reminders_enabled" value={String(isRemindersEnabled)} />
             <input type="hidden" name="clinic_locations" value={JSON.stringify(locations)} />
 
             {/* Custom Tabs Navigation and Action Buttons */}
@@ -237,31 +375,117 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
                         </div>
 
                         {/* Weekly Day-off Toggle */}
-                        <div className="mt-10 p-6 md:p-8 rounded-[2.5rem] bg-gradient-to-br from-slate-50 to-white border border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6 group hover:shadow-xl hover:shadow-slate-200/40 transition-all duration-500 overflow-hidden relative">
-                            <div className="absolute -left-20 -top-20 w-48 h-48 bg-rose-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
-                            <div className="flex items-center gap-6 text-right relative z-10 w-full md:w-auto">
-                                <div className={`p-4 rounded-[1.5rem] ${disableFridays ? 'bg-rose-100 text-rose-600 shadow-rose-200/50' : 'bg-slate-100 text-slate-500 shadow-slate-200/50'} transition-all duration-500 shadow-sm border border-white shrink-0`}>
-                                    <CalendarX className={`w-8 h-8 md:w-9 md:h-9 ${disableFridays ? 'scale-110' : 'scale-100'} transition-transform duration-500`} />
-                                </div>
-                                <div className="space-y-1.5 flex-1 p-1">
-                                    <p className="font-black text-slate-800 text-xl md:text-2xl tracking-tight">إغلاق العيادة دائمياً يوم الجمعة</p>
-                                    <p className="text-sm md:text-base text-slate-500/80 font-semibold max-w-sm leading-relaxed">تُعطّل جميع أيام الجمعة من نظام المواعيد تلقائياً.</p>
-                                </div>
-                            </div>
-                            <button
-                                type="button"
+                        <SettingToggle
+                            enabled={disableFridays}
+                            onChange={setDisableFridays}
+                            disabled={!isEditing}
+                            title="إغلاق العيادة دائمياً يوم الجمعة"
+                            description="تُعطّل جميع أيام الجمعة من نظام المواعيد تلقائياً."
+                            icon={CalendarX}
+                            activeColorClass="rose"
+                        />
+
+                        {/* WhatsApp Reminder Settings */}
+                        <div className="flex flex-col gap-2">
+                            <SettingToggle
+                                enabled={isRemindersEnabled}
+                                onChange={setIsRemindersEnabled}
                                 disabled={!isEditing}
-                                onClick={() => setDisableFridays(!disableFridays)}
-                                className={`relative shrink-0 inline-flex h-9 w-16 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-500 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${disableFridays ? 'bg-rose-500 hover:bg-rose-600 shadow-[0_0_20px_rgba(244,63,94,0.3)]' : 'bg-slate-300 hover:bg-slate-400'
-                                    } relative z-10`}
-                            >
-                                <span className="sr-only">إغلاق العيادة الجمعة</span>
-                                <span
-                                    aria-hidden="true"
-                                    className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-md ring-0 transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${disableFridays ? '-translate-x-8' : 'translate-x-0'
-                                        }`}
-                                />
-                            </button>
+                                title="تفعيل التذكير الآلي عبر الواتساب"
+                                description="إرسال رسائل تذكير للمرضى بمواعيدهم بمجرد تأكيدها."
+                                icon={`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full"><path d="M3 21l1.65-3.8a9 9 0 1 1 3.4 2.9L3 21"/><path d="M9 10a.5.5 0 0 0 1 0V9a.5.5 0 0 0-1 0v1a5 5 0 0 0 5 5h1a.5.5 0 0 0 0-1h-1a.5.5 0 0 0 0 1"/></svg>`}
+                                activeColorClass="green"
+                            />
+
+                            {isRemindersEnabled && (
+                                <div className="space-y-3 animate-in fade-in duration-300 border-t border-green-100 pt-6">
+                                    <Label htmlFor="whatsapp_message_template" className="text-slate-700 font-bold text-lg">نص رسالة التذكير</Label>
+                                    <textarea
+                                        id="whatsapp_message_template"
+                                        name="whatsapp_message_template"
+                                        defaultValue={doctor?.whatsapp_message_template || "مرحبا {{patient_name}}، نود تذكيرك بموعدك القادم يوم {{date}} الساعة {{time}}."}
+                                        rows={3}
+                                        className="w-full rounded-xl border border-slate-200 focus:border-green-500 focus:ring-green-500/20 disabled:bg-slate-50 disabled:text-slate-600 disabled:opacity-100 p-4 resize-none transition-all shadow-inner"
+                                        disabled={!isEditing}
+                                    />
+                                    <p className="text-sm text-slate-500 mt-2 font-medium bg-white/50 p-3 rounded-lg border border-slate-100">
+                                        <span className="text-green-600 font-bold ml-1">المتغيرات المتاحة:</span>
+                                        <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded mx-1 text-slate-700">{"{{patient_name}}"}</code> <span className="text-xs text-slate-500">(اسم المريض), </span>
+                                        <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded mx-1 text-slate-700">{"{{time}}"}</code> <span className="text-xs text-slate-500">(وقت الموعد), </span>
+                                        <code className="text-xs bg-slate-100 px-1.5 py-0.5 rounded mx-1 text-slate-700">{"{{date}}"}</code> <span className="text-xs text-slate-500">(تاريخ الموعد)</span>
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Connection Status Section */}
+                            {isRemindersEnabled && (
+                                <div className="mt-4 p-5 rounded-2xl bg-white border border-slate-100 shadow-sm animate-in fade-in duration-300">
+                                    <h4 className="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2">
+                                        حالة الربط مع واتساب <Loader2 className={`w-4 h-4 text-green-600 ${botStatus.isConnected ? 'hidden' : 'animate-spin'}`} />
+                                    </h4>
+
+                                    {botStatus.isConnected ? (
+                                        <div className="flex flex-col md:flex-row items-center justify-between py-6 px-8 bg-green-50/50 rounded-xl border border-green-100/50 gap-8">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                                                    <CheckCircle className="w-8 h-8 text-green-600" />
+                                                </div>
+                                                <div>
+                                                    <span className="text-green-700 font-bold text-lg block">متصل بنجاح والتذكيرات الفورية تعمل!</span>
+                                                    <p className="text-sm text-green-600/80 mt-1">الرقم مرتبط بالنظام بشكل سليم.</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Test Message Form */}
+                                            <div className="w-full md:w-auto bg-white p-4 rounded-xl border border-green-100 shadow-sm flex flex-col gap-3 min-w-[280px]">
+                                                <Label className="text-sm font-bold text-slate-700">تنبيه تجريبي (Test Message)</Label>
+                                                <div className="flex gap-2">
+                                                    <Input
+                                                        value={testPhone}
+                                                        onChange={(e) => setTestPhone(e.target.value)}
+                                                        placeholder="أدخل رقمك الخاص (ex: 077...)"
+                                                        className="text-left bg-slate-50 border-slate-200 focus:border-green-500 focus:ring-green-500/20"
+                                                        dir="ltr"
+                                                    />
+                                                    <Button
+                                                        type="button"
+                                                        onClick={handleSendTest}
+                                                        disabled={isSendingTest || !testPhone}
+                                                        className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+                                                    >
+                                                        {isSendingTest ? <Loader2 className="w-4 h-4 animate-spin" /> : "إرسال"}
+                                                    </Button>
+                                                </div>
+                                                <p className="text-xs text-slate-400">ستصل رسالة تجريبية الآن لرقمك.</p>
+                                            </div>
+                                        </div>
+                                    ) : botStatus.qrCode ? (
+                                        <div className="flex flex-col md:flex-row items-center gap-8 py-4 px-2">
+                                            <div className="p-4 bg-white rounded-2xl shadow-[0_0_20px_rgba(0,0,0,0.08)] border border-slate-100">
+                                                <div className="w-48 h-48 md:w-56 md:h-56 relative rounded-xl overflow-hidden shadow-inner">
+                                                    <img src={botStatus.qrCode} alt="WhatsApp QR Code" className="absolute inset-0 w-full h-full object-cover rounded-lg" />
+                                                </div>
+                                            </div>
+                                            <div className="text-center md:text-right flex-1 space-y-4">
+                                                <div className="inline-block px-3 py-1 bg-amber-100 text-amber-700 text-sm font-bold rounded-full mb-2 border border-amber-200">بانتظار مسح الرمز</div>
+                                                <h5 className="font-black text-slate-800 text-xl md:text-2xl">يرجى مسح الـ QR Code لتسجيل الدخول</h5>
+                                                <ol className="text-slate-600 text-sm md:text-base space-y-2 list-decimal list-inside font-medium pr-2">
+                                                    <li>افتح تطبيق واتساب على هاتفك.</li>
+                                                    <li>اضغط على <strong>القائمة</strong> (ثلاث نقاط) في الأعلى واختر <strong>الأجهزة المرتبطة</strong>.</li>
+                                                    <li>اضغط على <strong>ربط جهاز</strong>.</li>
+                                                    <li>وجه كاميرا الهاتف نحو الرمز المربع الظاهر هنا.</li>
+                                                </ol>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+                                            <Loader2 className="w-8 h-8 animate-spin mb-3 text-slate-400" />
+                                            <p className="font-medium">جارٍ توليد الرمز المربع (QR Code)...</p>
+                                            <p className="text-xs mt-1 text-slate-400">تأكد من تشغيل خادم البوت (whatsapp-bot) في الخلفية</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

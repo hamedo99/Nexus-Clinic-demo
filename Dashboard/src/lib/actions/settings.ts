@@ -170,6 +170,8 @@ export async function getAllSettings() {
                     working_hours_schedule: true,
                     disabledDaysOfWeek: true,
                     clinic_locations: true,
+                    is_reminders_enabled: true,
+                    whatsapp_message_template: true,
                     updatedAt: true
                 }
             })
