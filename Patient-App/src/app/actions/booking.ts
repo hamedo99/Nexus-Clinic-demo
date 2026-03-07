@@ -43,37 +43,8 @@ export async function createBooking(prevState: any, formData: FormData) {
         console.log(`Booking attempt from IP: ${ip}, Phone: ${phone}`);
     } catch (e) { /* ignore header error */ }
 
-    // 3. Database-Level Throttling (Phone Number)
-    try {
-        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    // 3. DB Throttling moved to validateAndCreateBooking for parallel execution
 
-        // Anti-Spam: Block if same phone booked within last 2 hours
-        const recentBooking = await prisma.appointment.findFirst({
-            where: {
-                patient: { phoneNumber: phone },
-                createdAt: { gte: twoHoursAgo }
-            }
-        });
-
-        if (recentBooking) {
-            return { message: "عذراً، لقد قمت بحجز موعد مؤخراً. يرجى الانتظار قليلاً أو الاتصال بالعيادة.", success: false };
-        }
-
-        // Active Load Limit: Max 2 upcoming active bookings
-        const activeBookingsCount = await prisma.appointment.count({
-            where: {
-                patient: { phoneNumber: phone },
-                status: { in: ["PENDING", "CONFIRMED"] },
-                startTime: { gte: new Date() }
-            }
-        });
-
-        if (activeBookingsCount >= 2) {
-            return { message: "عذراً، لديك بالفعل موعدين نشطين قادمين. لا يمكنك حجز المزيد حالياً.", success: false };
-        }
-    } catch (dbError) {
-        console.error("Rate limit DB check failed:", dbError);
-    }
 
     const startTime = new Date(dateStr);
     if (timeStr) {
