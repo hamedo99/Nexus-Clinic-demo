@@ -65,6 +65,11 @@ export function UpcomingAppointmentsClient({ initialData }: UpcomingProps) {
     const [editTime, setEditTime] = useState("");
     const [editStatus, setEditStatus] = useState("");
     const [editLocation, setEditLocation] = useState("");
+
+    // Cancellation Modal State
+    const [cancelApId, setCancelApId] = useState<string | null>(null);
+    const [cancelApName, setCancelApName] = useState<string>("");
+
     const [isPending, startTransition] = useTransition();
 
     // Derived filtering
@@ -87,40 +92,56 @@ export function UpcomingAppointmentsClient({ initialData }: UpcomingProps) {
 
     const handleSaveEdit = () => {
         if (!editApId || !editDate || !editTime) return;
+        const targetId = editApId;
+        const targetDate = editDate;
+        const targetTime = editTime;
+        const targetStatus = editStatus;
+        const targetLocation = editLocation;
+
+        // 1. Optimistic UI Update: Instant feedback without waiting for server
+        setAppointments(prev => prev.map(ap => {
+            if (ap.id === targetId) {
+                const newStart = new Date(targetDate);
+                const [h, m] = targetTime.split(':').map(Number);
+                newStart.setHours(h, m, 0, 0);
+                return { ...ap, startTime: newStart, status: targetStatus, clinicLocation: targetLocation };
+            }
+            return ap;
+        }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
+
+        // 2. Hide modal instantly for 0ms delay experience
+        setEditApId(null);
+
+        // 3. Background server sync
         startTransition(() => {
-            editUpcomingAppointment(editApId, {
-                dateStr: editDate,
-                timeStr: editTime,
-                status: editStatus,
-                location: editLocation
-            }).then((res) => {
-                if (res.success) {
-                    // Optimistic UI Update
-                    setAppointments(prev => prev.map(ap => {
-                        if (ap.id === editApId) {
-                            const newStart = new Date(editDate);
-                            const [h, m] = editTime.split(':').map(Number);
-                            newStart.setHours(h, m, 0, 0);
-                            return { ...ap, startTime: newStart, status: editStatus, clinicLocation: editLocation };
-                        }
-                        return ap;
-                    }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()));
-                    setEditApId(null);
-                }
+            editUpcomingAppointment(targetId, {
+                dateStr: targetDate,
+                timeStr: targetTime,
+                status: targetStatus,
+                location: targetLocation
             });
         });
     };
 
     const handleCancelAppointment = (id: string, name: string) => {
-        if (confirm(`هل أنت متأكد أنك تريد إلغاء موعد المريض ${name}؟`)) {
-            startTransition(() => {
-                updateAppointmentStatus(id, "CANCELLED").then(res => {
-                    if (res.success) {
-                        setAppointments(prev => prev.map(ap => ap.id === id ? { ...ap, status: "CANCELLED" } : ap));
-                    }
-                });
-            });
-        }
+        setCancelApId(id);
+        setCancelApName(name);
+    };
+
+    const confirmCancelAppointment = () => {
+        if (!cancelApId) return;
+        const targetId = cancelApId;
+
+        // 1. Optimistic UI Update: Change status instantly
+        setAppointments(prev => prev.map(ap => ap.id === targetId ? { ...ap, status: "CANCELLED" } : ap));
+
+        // 2. Hide modal instantly for 0ms delay experience
+        setCancelApId(null);
+
+        // 3. Background server sync
+        startTransition(() => {
+            updateAppointmentStatus(targetId, "CANCELLED");
+        });
     };
 
     const getStatusStyle = (status: string) => {
@@ -348,6 +369,40 @@ export function UpcomingAppointmentsClient({ initialData }: UpcomingProps) {
                         </Button>
                         <Button variant="outline" onClick={() => setEditApId(null)} className="font-bold w-full sm:w-auto bg-slate-50">
                             إلغاء
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Cancel Confirmation Modal */}
+            <Dialog open={!!cancelApId} onOpenChange={(open) => !open && setCancelApId(null)}>
+                <DialogContent className="sm:max-w-[425px] border-red-100 dark:border-red-900/30 overflow-hidden" dir="rtl">
+                    <DialogHeader className="text-center pt-4">
+                        <div className="mx-auto w-16 h-16 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mb-5 ring-4 ring-red-50/50 dark:ring-red-500/5">
+                            <Trash2 className="w-8 h-8 text-red-500 dark:text-red-400" />
+                        </div>
+                        <DialogTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">إلغاء الموعد</DialogTitle>
+                        <DialogDescription className="text-base text-slate-600 dark:text-slate-400 mt-3 leading-relaxed">
+                            هل أنت متأكد أنك تريد إلغاء موعد المريض <span className="font-bold text-slate-800 dark:text-slate-200">{cancelApName}</span>؟
+                            <br />هذا الإجراء سيقوم بتغيير حالة الموعد ولن يمكن التراجع عنه.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <DialogFooter className="flex-row-reverse sm:justify-center gap-3 mt-6 pt-4 border-t border-slate-100 dark:border-gray-800/60 pb-2">
+                        <Button
+                            onClick={confirmCancelAppointment}
+                            disabled={isPending}
+                            variant="destructive"
+                            className="font-bold w-full sm:w-auto shadow-sm hover:shadow-md transition-all h-11 px-8 rounded-xl"
+                        >
+                            {isPending ? "جاري الإلغاء..." : "نعم، الغي الموعد"}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setCancelApId(null)}
+                            className="font-bold w-full sm:w-auto bg-slate-50 dark:bg-gray-800 border-slate-200 dark:border-gray-700 hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-600 dark:text-slate-300 h-11 px-8 rounded-xl transition-all"
+                        >
+                            تراجع
                         </Button>
                     </DialogFooter>
                 </DialogContent>

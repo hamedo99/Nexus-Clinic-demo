@@ -174,7 +174,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
 
         const now = new Date();
         const isToday = isSameDay(date, now);
-        const duration = 60; // Hourly force
+        const duration = activeConfig.slotDuration || 60;
 
         ranges.forEach(range => {
             const startH = parseInt(range.startTime.split(':')[0]);
@@ -191,7 +191,8 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                 const m = currentTime.getMinutes();
 
                 const slotTimeStr24 = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-                const isSlotExactBooked = exactBooked.includes(slotTimeStr24);
+                const slotBookingsCount = exactBooked.filter((t: string) => t === slotTimeStr24).length;
+                const isSlotExactBooked = slotBookingsCount >= (activeConfig.patientsPerHour || 1);
                 const isHourFull = fullHours.includes(h);
                 const isPast = isToday && currentTime < now;
 
@@ -709,8 +710,8 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                                         <Share2 className="w-5 h-5" />
                                         مشاركة عبر واتساب
                                     </Button>
-                                    <Button variant="ghost" className="w-full h-12 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all" onClick={() => router.push('/')}>
-                                        العودة للرئيسية
+                                    <Button variant="ghost" className="w-full h-12 text-slate-400 hover:text-white hover:bg-slate-800/50 rounded-xl transition-all" onClick={() => { handleReset(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                                        العودة لصفحة الطبيب
                                     </Button>
                                 </div>
                             </Card>
@@ -724,8 +725,13 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
                         {step > 1 ? (
                             <Button variant="outline" onClick={handleBack} className="h-12 px-8 rounded-xl border-slate-700 hover:bg-slate-800 text-slate-300 gap-2">السابق</Button>
                         ) : (<div></div>)}
-                        <Button onClick={handleNext} disabled={isSubmitting || (step === 1 && !selectedLocation) || (step === 2 && !date) || (step === 3 && !selectedTime)} className={cn("h-12 px-10 rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 transition-all active:scale-95", isSubmitting ? "opacity-70 cursor-wait" : "bg-cyan-500 hover:bg-cyan-400 text-white")}>
-                            {isSubmitting ? "جاري الحجز..." : step === 5 ? "تأكيد الحجز" : "التالي"}
+                        <Button onClick={handleNext} disabled={isSubmitting || (step === 1 && !selectedLocation) || (step === 2 && !date) || (step === 3 && !selectedTime)} className={cn("h-12 px-10 rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 transition-all active:scale-95", isSubmitting ? "opacity-70 cursor-wait bg-cyan-600/50" : "bg-cyan-500 hover:bg-cyan-400 text-white")}>
+                            {isSubmitting ? (
+                                <div className="flex items-center gap-2">
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span>جاري الحجز...</span>
+                                </div>
+                            ) : step === 5 ? "تأكيد الحجز" : "التالي"}
                         </Button>
                     </div>
                 )}
