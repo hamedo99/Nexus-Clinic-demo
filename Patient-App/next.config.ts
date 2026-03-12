@@ -17,7 +17,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   // SECURITY FIX: Apply security headers check
   async headers() {
-    return [{ source: '/(.*)', headers: securityHeaders }];
+    return [{ source: '/:path*', headers: securityHeaders }];
   },
   images: {
     unoptimized: true,

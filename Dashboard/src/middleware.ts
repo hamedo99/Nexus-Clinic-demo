@@ -1,7 +1,7 @@
 // ... existing code ...
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifySessionToken, getSession } from '@/lib/auth'
+import { verifySessionToken } from '@/lib/auth'
 // ... existing code ...
 
 export async function middleware(request: NextRequest) {
