@@ -14,7 +14,9 @@ export async function createSession(payload: any) {
 
     (await cookies()).set("session", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        // SECURITY FIX: Enforce secure flag and strict sameSite mapping (ADDITIONAL REQS)
+        secure: true,
+        sameSite: 'strict',
         expires,
         path: "/",
     });

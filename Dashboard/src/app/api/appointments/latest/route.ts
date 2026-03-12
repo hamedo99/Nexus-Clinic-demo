@@ -1,22 +1,38 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSession } from '@/lib/auth';
+import { z } from 'zod'; // SECURITY FIX: Add Zod for parameter validation
+import { isRateLimited } from '@/lib/rateLimit';
 
 export async function GET(request: Request) {
     try {
+        // SECURITY FIX: Rate limiting (HIGH #4)
+        const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        if (isRateLimited(ip, 30, 60 * 1000)) { // 30 reqs per minute for polling endpoint
+             return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+        }
+
         const session: any = await getSession();
         if (!session) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { searchParams } = new URL(request.url);
-        const since = searchParams.get('since');
+        const sinceRaw = searchParams.get('since');
 
-        if (!since) {
-            return NextResponse.json({ error: 'Missing since parameter' }, { status: 400 });
+        // SECURITY FIX: Add Zod validation for since parameter (ADDITIONAL REQ 4)
+        // Validates it is a valid ISO date string
+        const querySchema = z.object({
+            since: z.string().datetime()
+        });
+
+        const validation = querySchema.safeParse({ since: sinceRaw });
+
+        if (!validation.success) {
+            return NextResponse.json({ error: 'Invalid since parameter, must be a valid ISO format.' }, { status: 400 });
         }
 
-        const dateSince = new Date(since);
+        const dateSince = new Date(validation.data.since);
 
         // Find appointments created after the specified time
         const newAppointments = await prisma.appointment.findMany({

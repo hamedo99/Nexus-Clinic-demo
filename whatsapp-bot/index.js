@@ -24,11 +24,33 @@ console.log("🟢 Initializing WhatsApp Bot & Express Server...");
 
 // 1. Setup Express Server
 const app = express();
-app.use(cors()); // Allow cross-origin requests from the Next.js frontend
+
+// SECURITY FIX: Restrict CORS (HIGH #3)
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  methods: ['GET', 'POST'],
+  credentials: true
+}));
+
 app.use(express.json());
 
+// SECURITY FIX: Rate Limiting (HIGH #4)
+const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
+app.use('/api/', limiter);
+const messageLimiter = rateLimit({ windowMs: 60 * 1000, max: 5 });
+
+// SECURITY FIX: API Key Middleware (HIGH #7)
+function requireApiKey(req, res, next) {
+  const key = req.headers['x-api-key'];
+  if (!key || key !== process.env.INTERNAL_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
 // Expose Status Endpoint
-app.get('/api/whatsapp/status', (req, res) => {
+app.get('/api/whatsapp/status', requireApiKey, (req, res) => {
     res.json({
         isConnected,
         qrCode: qrCodeDataURL
@@ -36,7 +58,8 @@ app.get('/api/whatsapp/status', (req, res) => {
 });
 
 // Test Message Endpoint
-app.post('/api/whatsapp/test', async (req, res) => {
+// SECURITY FIX: Use Require API key and rate limiting (HIGH #7, HIGH #4)
+app.post('/api/whatsapp/test', requireApiKey, messageLimiter, async (req, res) => {
     if (!isConnected) return res.status(400).json({ success: false, message: 'البوت غير متصل بالواتساب' });
 
     const { phone } = req.body;
@@ -133,28 +156,30 @@ async function pollUpcomingAppointments() {
 
         if (!doctors || doctors.length === 0) return;
 
-        const doctorIds = doctors.map(d => `'${d.id}'`).join(',');
+        // SECURITY FIX: Prevent SQL Injection using parameterized queries (CRITICAL #2)
+        const doctorIds = doctors.map(d => d.id);
 
         const appointmentsResult = await dbObj.query(`
             SELECT id, "startTime", status, reminder_sent, "doctorId", "patientId"
             FROM appointments
-            WHERE "doctorId" IN (${doctorIds})
+            WHERE "doctorId" = ANY($1)
             AND status = 'CONFIRMED'
             AND reminder_sent = false
-            AND "startTime" >= $1
-            AND "startTime" <= $2
-        `, [now.toISOString(), next24Hours.toISOString()]);
+            AND "startTime" >= $2
+            AND "startTime" <= $3
+        `, [doctorIds, now.toISOString(), next24Hours.toISOString()]);
         const appointments = appointmentsResult.rows;
 
         if (!appointments || appointments.length === 0) return;
 
-        const patientIds = [...new Set(appointments.map(a => `'${a.patientId}'`))].join(',');
+        // SECURITY FIX: Prevent SQL Injection using parameterized queries (CRITICAL #2)
+        const patientIds = [...new Set(appointments.map(a => a.patientId))];
 
         const patientsResult = await dbObj.query(`
             SELECT id, "fullName", "phoneNumber"
             FROM patients
-            WHERE id IN (${patientIds})
-        `);
+            WHERE id = ANY($1)
+        `, [patientIds]);
         const patients = patientsResult.rows;
 
         const patientMap = {};
@@ -189,9 +214,9 @@ async function pollUpcomingAppointments() {
 
             const phoneId = `${formattedPhone}@c.us`;
 
+            // SECURITY FIX: Don't log patient phone number or message contents (MEDIUM #11)
             console.log(`\n============================`);
-            console.log(`📱 Sending WhatsApp to: ${phoneId}`);
-            console.log(`💬 Message: \n${finalMessage}`);
+            console.log(`📱 Sending reminder — appointmentId: ${appointment.id}`);
             console.log(`============================\n`);
 
             try {

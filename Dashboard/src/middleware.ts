@@ -1,7 +1,7 @@
 // ... existing code ...
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifySessionToken } from '@/lib/auth'
+import { verifySessionToken, getSession } from '@/lib/auth'
 // ... existing code ...
 
 export async function middleware(request: NextRequest) {
@@ -42,9 +42,24 @@ export async function middleware(request: NextRequest) {
         }
     }
 
+    // SECURITY FIX: API Route Protection (HIGH #6)
+    const isApiRoute = request.nextUrl.pathname.startsWith('/api')
+    if (isApiRoute && !session) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // SECURITY FIX: Role-Based Authorization for Admin (MEDIUM #10)
+    if (request.nextUrl.pathname.startsWith('/admin') && session) {
+        const payload = await verifySessionToken(session);
+        if (!payload || payload.role !== 'ADMIN') {
+            return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
+    }
+
     return NextResponse.next()
 }
 
 export const config = {
-    matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+    // SECURITY FIX: Allow API routes to be processed by middleware, remove 'api' (HIGH #6)
+    matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
