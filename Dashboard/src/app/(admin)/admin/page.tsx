@@ -70,7 +70,7 @@ export default async function SuperAdminPage() {
       theme_color: true,
       logo_url: true,
       isActive: true,
-    },
+    } as any,
   });
 
   return (

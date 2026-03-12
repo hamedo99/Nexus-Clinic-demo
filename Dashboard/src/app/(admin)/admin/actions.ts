@@ -36,7 +36,7 @@ export async function manageDoctor(data: {
           theme_color: data.theme_color,
           logo_url: data.logo_url,
           isActive: data.isActive,
-        },
+        } as any,
       });
     } else {
       await prisma.doctor.create({
@@ -47,7 +47,7 @@ export async function manageDoctor(data: {
           theme_color: data.theme_color,
           logo_url: data.logo_url,
           isActive: data.isActive,
-        },
+        } as any,
       });
     }
     revalidatePath("/admin");
