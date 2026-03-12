@@ -302,7 +302,7 @@ export function UpcomingAppointmentsClient({ initialData }: UpcomingProps) {
 
             {/* Edit Modal */}
             <Dialog open={!!editApId} onOpenChange={(open) => !open && setEditApId(null)}>
-                <DialogContent className="sm:max-w-[425px]" dir="rtl">
+                <DialogContent aria-describedby={undefined} className="sm:max-w-[425px]" dir="rtl">
                     <DialogHeader className="text-right">
                         <DialogTitle className="text-2xl text-primary font-bold">تعديل الموعد القادم</DialogTitle>
                         <DialogDescription>
@@ -376,7 +376,7 @@ export function UpcomingAppointmentsClient({ initialData }: UpcomingProps) {
 
             {/* Cancel Confirmation Modal */}
             <Dialog open={!!cancelApId} onOpenChange={(open) => !open && setCancelApId(null)}>
-                <DialogContent className="sm:max-w-[425px] border-red-100 dark:border-red-900/30 overflow-hidden" dir="rtl">
+                <DialogContent aria-describedby={undefined} className="sm:max-w-[425px] border-red-100 dark:border-red-900/30 overflow-hidden" dir="rtl">
                     <DialogHeader className="text-center pt-4">
                         <div className="mx-auto w-16 h-16 rounded-full bg-red-50 dark:bg-red-500/10 flex items-center justify-center mb-5 ring-4 ring-red-50/50 dark:ring-red-500/5">
                             <Trash2 className="w-8 h-8 text-red-500 dark:text-red-400" />

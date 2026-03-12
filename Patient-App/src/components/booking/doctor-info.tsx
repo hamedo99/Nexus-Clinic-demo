@@ -55,7 +55,7 @@ const DoctorInfo = memo(function DoctorInfo({ doctor }: { doctor: DoctorData }) 
                             <span>المعلومات</span>
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-slate-900/95 border-slate-800 text-white w-[95vw] sm:max-w-xl md:max-w-2xl max-h-[85vh] overflow-y-auto backdrop-blur-xl custom-scrollbar rounded-[32px] p-6 md:p-8" dir="rtl">
+                    <DialogContent aria-describedby={undefined} className="bg-slate-900/95 border-slate-800 text-white w-[95vw] sm:max-w-xl md:max-w-2xl max-h-[85vh] overflow-y-auto backdrop-blur-xl custom-scrollbar rounded-[32px] p-6 md:p-8" dir="rtl">
                         <DialogHeader className="text-right space-y-0 mt-4 md:mt-2">
                             <DialogTitle className="flex items-start gap-3 text-right">
                                 <div className="w-12 h-12 rounded-2xl bg-cyan-900/30 flex items-center justify-center text-cyan-400 border border-cyan-500/20 shadow-[0_0_15px_rgba(8,145,178,0.2)] shrink-0">

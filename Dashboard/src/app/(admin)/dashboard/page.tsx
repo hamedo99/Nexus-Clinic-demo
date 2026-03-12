@@ -15,6 +15,10 @@ export default async function DashboardPage(props: { searchParams: Promise<{ q?:
 
 async function DashboardContent({ searchParams }: { searchParams: { q?: string } }) {
     const session: any = await getSession();
+    if (session?.role === "ADMIN") {
+        const { redirect } = await import("next/navigation");
+        redirect("/admin");
+    }
     const query = searchParams?.q || '';
 
     try {

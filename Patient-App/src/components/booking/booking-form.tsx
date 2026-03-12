@@ -756,7 +756,7 @@ export default function BookingForm({ config, doctorId, doctorName }: { config?:
 
                 {/* Error Modal */}
                 <Dialog open={errorState.isOpen} onOpenChange={(v) => setErrorState({ ...errorState, isOpen: v })}>
-                    <DialogContent className="bg-slate-900 border-slate-800 text-white">
+                    <DialogContent aria-describedby={undefined} className="bg-slate-900 border-slate-800 text-white">
                         <DialogHeader>
                             <DialogTitle className="text-red-400">تنبيه</DialogTitle>
                             <DialogDescription className="text-slate-300">{errorState.message}</DialogDescription>

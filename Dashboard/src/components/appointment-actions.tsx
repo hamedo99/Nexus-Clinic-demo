@@ -97,7 +97,7 @@ export function AppointmentActions({ id, onStatusChange, role, status }: Appoint
                         ⏱️
                     </button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent aria-describedby={undefined}>
                     <DialogHeader>
                         <DialogTitle>تأجيل الموعد</DialogTitle>
                         <DialogDescription>

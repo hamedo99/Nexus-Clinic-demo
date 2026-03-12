@@ -44,7 +44,7 @@ export function EditDoctorDialog({ doctor }: { doctor: any }) {
                     <Pencil className="h-4 w-4 text-gray-500" />
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]" dir="rtl">
+            <DialogContent aria-describedby={undefined} className="sm:max-w-[425px]" dir="rtl">
                 <DialogHeader>
                     <DialogTitle>تعديل بيانات الطبيب</DialogTitle>
                     <DialogDescription>

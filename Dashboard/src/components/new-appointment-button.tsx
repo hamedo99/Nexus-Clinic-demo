@@ -211,7 +211,7 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]" dir="rtl">
+            <DialogContent aria-describedby={undefined} className="sm:max-w-[425px]" dir="rtl">
                 <DialogHeader className="text-right">
                     <DialogTitle>حجز موعد جديد</DialogTitle>
                     <DialogDescription>

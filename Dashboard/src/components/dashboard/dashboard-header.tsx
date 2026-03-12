@@ -66,7 +66,7 @@ export const DashboardHeader = memo(function DashboardHeader({
 
                 <div className="flex items-center gap-2 bg-muted/50 px-4 py-2 rounded-xl text-sm font-medium">
                     <CalendarDays className="h-5 w-5 text-primary" />
-                    <span>{new Date().toLocaleDateString('ar-IQ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                    <span suppressHydrationWarning>{new Date().toLocaleDateString('ar-IQ', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 </div>
 
                 <Button
