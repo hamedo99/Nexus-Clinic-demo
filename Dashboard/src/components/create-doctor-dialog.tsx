@@ -51,7 +51,7 @@ export function CreateDoctorDialog() {
                     إضافة طبيب جديد
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]" dir="rtl">
+            <DialogContent aria-describedby={undefined} className="sm:max-w-[425px]" dir="rtl">
                 <DialogHeader>
                     <DialogTitle>إضافة طبيب جديد</DialogTitle>
                     <DialogDescription>

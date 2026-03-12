@@ -77,7 +77,7 @@ export function BlockedDateManager({ initialData }: { initialData: BlockedDate[]
                             إضافة إغلاق
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]" dir="rtl">
+                    <DialogContent aria-describedby={undefined} className="sm:max-w-[425px]" dir="rtl">
                         <DialogHeader>
                             <DialogTitle>إضافة فترة إغلاق</DialogTitle>
                             <DialogDescription>

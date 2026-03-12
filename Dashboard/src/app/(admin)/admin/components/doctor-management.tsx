@@ -136,7 +136,7 @@ export function DoctorManagement({ doctors }: DoctorManagementProps) {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md" dir="rtl">
+        <DialogContent aria-describedby={undefined} className="max-w-md" dir="rtl">
           <DialogHeader>
             <DialogTitle>{editingDoctor.id ? "تعديل إعدادات الطبيب" : "إضافة طبيب جديد"}</DialogTitle>
           </DialogHeader>

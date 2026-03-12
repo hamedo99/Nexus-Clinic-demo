@@ -47,7 +47,7 @@ export function ClinicStatusWidget({ initialStatus, initialReason }: { initialSt
                                 إغلاق العيادة
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent aria-describedby={undefined}>
                             <DialogHeader>
                                 <DialogTitle>إغلاق العيادة</DialogTitle>
                                 <DialogDescription>

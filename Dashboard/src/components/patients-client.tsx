@@ -97,7 +97,7 @@ export function PatientsClient({ initialQuery }: { initialQuery: string }) {
                             إضافة مريض جديد
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent aria-describedby={undefined}>
                         <DialogHeader>
                             <DialogTitle>إضافة مريض جديد</DialogTitle>
                         </DialogHeader>
