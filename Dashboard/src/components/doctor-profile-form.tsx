@@ -132,7 +132,10 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
             try {
                 // Poll WhatsApp Bot Server URL (uses env var or defaults to localhost:4000)
                 const botApiUrl = process.env.NEXT_PUBLIC_WHATSAPP_API_URL || "http://localhost:4000";
-                const res = await fetch(`${botApiUrl}/api/whatsapp/status`);
+                const apiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY || "secret-api-key";
+                const res = await fetch(`${botApiUrl}/api/whatsapp/status`, {
+                    headers: { "x-api-key": apiKey }
+                });
                 if (res.ok) {
                     const data = await res.json();
                     setBotStatus(data);
@@ -159,9 +162,13 @@ export function DoctorProfileForm({ doctor, onUpdate }: { doctor: any, onUpdate?
         setIsSendingTest(true);
         try {
             const botApiUrl = process.env.NEXT_PUBLIC_WHATSAPP_API_URL || "http://localhost:4000";
+            const apiKey = process.env.NEXT_PUBLIC_INTERNAL_API_KEY || "secret-api-key";
             const res = await fetch(`${botApiUrl}/api/whatsapp/test`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json",
+                    "x-api-key": apiKey
+                },
                 body: JSON.stringify({ phone: testPhone })
             });
             const data = await res.json();

@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSession } from '@/lib/auth'; // SECURITY FIX: Add getSession
+import { z } from 'zod'; // SECURITY FIX: Add Zod
+import { isRateLimited } from '@/lib/rateLimit';
 
 // Fully Serverless-compatible universal upload handler using Supabase Storage
 export async function POST(request: NextRequest) {
   try {
+    // SECURITY FIX: Rate limiting (HIGH #4)
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+    if (isRateLimited(ip, 20, 15 * 60 * 1000)) {
+       return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
+    // SECURITY FIX: Session verification (CRITICAL #1)
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    // Ensure we use the best available key for uploads (Service Role > Default Publishable > Anon)
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    // SECURITY FIX: Use anon key only, don't expose keys (HIGH #5)
+    const supabaseKey = process.env.SUPABASE_ANON_KEY || "";
 
     if (!supabaseUrl || !supabaseKey) {
       console.error("Missing Supabase configuration");
@@ -16,9 +31,27 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const formData = await request.formData();
+    
+    // SECURITY FIX: Input output validation (Zod)
+    const uploadInputSchema = z.object({
+       file: z.any().refine((val) => typeof val === 'object' && val !== null, "File is required"),
+       oldFileUrl: z.string().url().optional().or(z.literal('')).or(z.null()),
+       folder: z.string().max(100).optional().or(z.null())
+    });
+
+    const validation = uploadInputSchema.safeParse({
+       file: formData.get('file'),
+       oldFileUrl: formData.get('oldFileUrl'),
+       folder: formData.get('folder')
+    });
+
+    if (!validation.success) {
+       return NextResponse.json({ error: 'Invalid parameters', details: "validation error" }, { status: 400 });
+    }
+
     const file = formData.get('file') as File;
-    const oldFileUrl = formData.get('oldFileUrl') as string;
-    const folder = (formData.get('folder') as string) || 'general'; // Default folder
+    const oldFileUrl = validation.data.oldFileUrl as string;
+    const folder = (validation.data.folder as string) || 'general'; // Default folder
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -58,9 +91,9 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('Supabase storage error:', uploadError);
+      // SECURITY FIX: Do not leak internal generic error details (MEDIUM #8)
       return NextResponse.json({
-        error: 'Failed to upload to storage',
-        details: uploadError.message
+        error: 'Upload failed. Please try again.'
       }, { status: 500 });
     }
 
@@ -77,9 +110,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Global upload handler error:', error);
+    // SECURITY FIX: Do not leak internal generic error details (MEDIUM #8)
     return NextResponse.json({
-      error: 'Internal upload failure',
-      details: error.message || String(error)
+      error: 'Internal upload failure. Please try again.'
     }, { status: 500 });
   }
 }
