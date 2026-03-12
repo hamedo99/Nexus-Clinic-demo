@@ -20,15 +20,20 @@ export function SidebarContent({ role, onNavItemClick }: { role?: string; onNavI
             </div>
 
             <nav className="flex-1 p-4 space-y-2">
-                <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} label="لوحة التحكم" active={pathname === "/dashboard"} onClick={onNavItemClick} />
-
-                {role === "ADMIN" && (
-                    <NavLink href="/doctors" icon={<Users size={20} className="text-blue-600" />} label="إدارة الأطباء" active={pathname === "/doctors"} onClick={onNavItemClick} />
+                {role === "ADMIN" ? (
+                    <>
+                        <NavLink href="/admin" icon={<LayoutDashboard size={20} className="text-purple-600" />} label="لوحة تحكم النظام" active={pathname === "/admin"} onClick={onNavItemClick} />
+                        <NavLink href="/doctors" icon={<Users size={20} className="text-blue-600" />} label="إدارة الأطباء" active={pathname === "/doctors"} onClick={onNavItemClick} />
+                        <NavLink href="/settings" icon={<Settings size={20} />} label="الإعدادات" active={pathname === "/settings"} onClick={onNavItemClick} />
+                    </>
+                ) : (
+                    <>
+                        <NavLink href="/dashboard" icon={<LayoutDashboard size={20} />} label="لوحة التحكم" active={pathname === "/dashboard"} onClick={onNavItemClick} />
+                        <NavLink href="/patients" icon={<Users size={20} />} label="سجل المرضى" active={pathname === "/patients"} onClick={onNavItemClick} />
+                        <NavLink href="/calendar" icon={<Calendar size={20} />} label="المواعيد القادمة" active={pathname === "/calendar"} onClick={onNavItemClick} />
+                        <NavLink href="/settings" icon={<Settings size={20} />} label="الإعدادات" active={pathname === "/settings"} onClick={onNavItemClick} />
+                    </>
                 )}
-
-                <NavLink href="/patients" icon={<Users size={20} />} label="سجل المرضى" active={pathname === "/patients"} onClick={onNavItemClick} />
-                <NavLink href="/calendar" icon={<Calendar size={20} />} label="المواعيد القادمة" active={pathname === "/calendar"} onClick={onNavItemClick} />
-                <NavLink href="/settings" icon={<Settings size={20} />} label="الإعدادات" active={pathname === "/settings"} onClick={onNavItemClick} />
             </nav>
 
             <div className="p-4 border-t border-gray-200 dark:border-gray-700">

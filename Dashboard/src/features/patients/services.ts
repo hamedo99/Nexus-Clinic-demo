@@ -8,6 +8,11 @@ export const patientService = {
         return await prisma.patient.findMany({
             where: {
                 ...doctorFilter,
+                appointments: {
+                    some: {
+                        status: { in: ["CONFIRMED", "COMPLETED"] }
+                    }
+                },
                 OR: [
                     { fullName: { contains: query, mode: "insensitive" } },
                     { phoneNumber: { contains: query } },

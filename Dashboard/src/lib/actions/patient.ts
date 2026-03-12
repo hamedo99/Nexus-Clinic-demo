@@ -5,22 +5,35 @@ import { revalidatePath, unstable_noStore as noStore } from "next/cache";
 import { getSession } from "@/lib/auth";
 import { ActionResponse } from "@/lib/types";
 
+async function getDoctorFilterAndSession() {
+    const session = await getSession() as any;
+    const doctorFilter = (session && session.role !== "ADMIN" && session.doctorId) ? { doctorId: session.doctorId } : {};
+    return { session, doctorFilter };
+}
+
 /**
  * Searches and fetches patients based on query and doctor ownership.
  */
 export async function getPatients(query: string = "", page: number = 1, limit: number = 10) {
     noStore();
     try {
-        const session = await getSession() as any;
-        const doctorFilter = (session && session.role !== "ADMIN" && session.doctorId) ? { doctorId: session.doctorId } : {};
+        const { doctorFilter } = await getDoctorFilterAndSession();
 
-        const where = {
+        const where: any = {
             ...doctorFilter,
-            OR: query ? [
+            appointments: {
+                some: {
+                    status: { in: ["CONFIRMED", "COMPLETED"] }
+                }
+            }
+        };
+
+        if (query) {
+            where.OR = [
                 { fullName: { contains: query, mode: "insensitive" as any } },
                 { phoneNumber: { contains: query } },
-            ] : undefined,
-        };
+            ];
+        }
 
         const [patients, total] = await Promise.all([
             prisma.patient.findMany({
@@ -84,8 +97,7 @@ export async function createPatient(prevState: any, formData: FormData): Promise
 export async function getPatientById(id: string) {
     noStore();
     try {
-        const session = await getSession() as any;
-        const doctorFilter = (session && session.role !== "ADMIN" && session.doctorId) ? { doctorId: session.doctorId } : {};
+        const { session, doctorFilter } = await getDoctorFilterAndSession();
 
         const patient = await prisma.patient.findUnique({
             where: { id },

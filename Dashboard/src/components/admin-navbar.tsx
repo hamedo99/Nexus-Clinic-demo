@@ -23,6 +23,14 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
 
     const unreadCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
 
+    const adminNotifications = useMemo(() => [
+        { id: '1', title: 'تنبيه النظام', message: 'بوت الواتساب متصل بنجاح بحالتين.', time: new Date().toISOString(), read: false, type: 'success' },
+        { id: '2', title: 'تسجيل جديد', message: 'تم إضافة عيادة جديدة إلى النظام.', time: new Date(Date.now() - 86400000).toISOString(), read: true, type: 'appointment' }
+    ], []);
+
+    const displayNotifications = role === "ADMIN" ? adminNotifications : notifications;
+    const currentUnreadCount = role === "ADMIN" ? adminNotifications.filter(n => !n.read).length : unreadCount;
+
     const notificationRef = useRef<HTMLDivElement>(null);
     const searchParams = useSearchParams();
     const pathname = usePathname();
@@ -85,7 +93,7 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
                     <div className="relative w-full max-w-md hidden md:block">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
-                            placeholder="البحث عن مرضى، مواعيد..."
+                            placeholder={role === "ADMIN" ? "البحث عن أطباء أو عيادات..." : "البحث عن مرضى، مواعيد..."}
                             className="pl-10 bg-gray-50 dark:bg-gray-900/50 border-none ring-0 focus-visible:ring-1 focus-visible:ring-primary/20"
                             onChange={(e) => setSearchTerm(e.target.value)}
                             value={searchTerm}
@@ -107,7 +115,7 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
                         onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
                     >
                         <Bell size={20} />
-                        {unreadCount > 0 && (
+                        {currentUnreadCount > 0 && (
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"></span>
                         )}
                     </Button>
@@ -124,16 +132,16 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
                             </div>
 
                             <div className="max-h-[400px] overflow-y-auto">
-                                {notifications.length > 0 ? (
+                                {displayNotifications.length > 0 ? (
                                     <div className="flex flex-col">
-                                        {notifications.map((n) => (
+                                        {displayNotifications.map((n) => (
                                             <div
                                                 key={n.id}
                                                 className={cn(
                                                     "p-4 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-colors cursor-pointer relative",
                                                     !n.read && "bg-primary/[0.02]"
                                                 )}
-                                                onClick={() => markAsRead(n.id)}
+                                                onClick={() => role === "ADMIN" ? null : markAsRead(n.id)}
                                             >
                                                 <div className="flex gap-3">
                                                     <div className={cn(
@@ -174,9 +182,9 @@ export function AdminNavbar({ userName, role }: { userName?: string; role?: stri
                                 )}
                             </div>
 
-                            {notifications.length > 0 && (
+                            {displayNotifications.length > 0 && role !== "ADMIN" && (
                                 <div className="px-4 pt-3 mt-2 border-t border-gray-50 dark:border-gray-700">
-                                    <Button variant="link" className="w-full text-[11px] h-auto p-0 text-primary font-bold" onClick={() => notifications.forEach(n => markAsRead(n.id))}>
+                                    <Button variant="link" className="w-full text-[11px] h-auto p-0 text-primary font-bold" onClick={() => displayNotifications.forEach(n => markAsRead(n.id))}>
                                         تحديد الكل كمقروء
                                     </Button>
                                 </div>
