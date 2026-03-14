@@ -99,13 +99,13 @@ export function DashboardClient({ initialData, role, userName, doctorId, allDoct
                 <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700/50 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 max-w-5xl mx-auto shadow-md">
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-4 text-xl font-bold">
-                            <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary transition-colors h-10 w-10 text-gray-500 dark:text-gray-400 rounded-full" onClick={() => setCurrentDate(prev => new Date(prev.setDate(prev.getDate() + 1)))}>
+                            <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary transition-colors h-10 w-10 text-gray-500 dark:text-gray-400 rounded-full" onClick={() => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 1))}>
                                 <ChevronRight className="w-6 h-6" />
                             </Button>
                             <div className="text-xl md:text-2xl font-bold flex items-center gap-2 min-w-[150px] justify-center text-slate-800 dark:text-gray-100">
                                 {currentDate.toLocaleDateString("ar-EG", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                             </div>
-                            <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary transition-colors h-10 w-10 text-gray-500 dark:text-gray-400 rounded-full" onClick={() => setCurrentDate(prev => new Date(prev.setDate(prev.getDate() - 1)))}>
+                            <Button variant="ghost" size="icon" className="hover:bg-primary/10 hover:text-primary transition-colors h-10 w-10 text-gray-500 dark:text-gray-400 rounded-full" onClick={() => setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 1))}>
                                 <ChevronLeft className="w-6 h-6" />
                             </Button>
                         </div>
