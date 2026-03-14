@@ -44,18 +44,19 @@ export default async function SuperAdminPage() {
   }
 
   // 2. Fetch Doctors
-  const doctorsList = await prisma.doctor.findMany({
-    select: {
-      id: true,
-      name: true,
-      specialty: true,
-      clinicPhone: true,
-      theme_color: true,
-      logo_url: true,
-      isActive: true,
-    },
+  const rawDoctorsList = await prisma.doctor.findMany({
     orderBy: { createdAt: "desc" }
   });
+
+  const doctorsList = rawDoctorsList.map((doc: any) => ({
+      id: doc.id,
+      name: doc.name,
+      specialty: doc.specialty,
+      clinicPhone: doc.clinicPhone,
+      theme_color: doc.theme_color,
+      logo_url: doc.logo_url,
+      isActive: doc.isActive,
+  }));
 
   // 3. Fetch Global Appointments
   const globalAppointmentsList = await prisma.appointment.findMany({
