@@ -74,24 +74,6 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
         });
     }, [doctorIdToUse]);
 
-    // Check if a date is disabled
-    const isDateDisabled = (day: Date) => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (day < today) return true;
-        if (disabledDays.includes(day.getDay())) return true;
-
-        if (selectedLocation && schedule && schedule.length > 0) {
-            const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-            const selectedDayName = dayNames[day.getDay()];
-            const hasLocationThisDay = schedule.some((s: any) => s.location === selectedLocation && s.day === selectedDayName);
-            if (!hasLocationThisDay) return true;
-        }
-
-        return false;
-    };
-
     // Derived Hours Logic
     let validHours: number[] = [];
     if (selectedLocation && date && schedule && schedule.length > 0) {
@@ -110,9 +92,49 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
     }
 
     // Fallback if no specific schedules found
-    if (validHours.length === 0) {
+    if (validHours.length === 0 && selectedLocation) {
+        // Only if no schedule found at all for this day
+        validHours = [];
+    } else if (validHours.length === 0) {
         validHours = Array.from({ length: 24 - 10 + 1 }, (_, i) => 10 + i);
     }
+
+    // Filter validHours if the selected date is today
+    if (date && date.toDateString() === new Date().toDateString()) {
+        const currentHour = new Date().getHours();
+        validHours = validHours.filter(h => h > currentHour);
+    }
+
+    // Check if a date is disabled
+    const isDateDisabled = (day: Date) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (day < today) return true;
+        if (disabledDays.includes(day.getDay())) return true;
+
+        if (selectedLocation && schedule && schedule.length > 0) {
+            const dayNames = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+            const selectedDayName = dayNames[day.getDay()];
+            const hasLocationThisDay = schedule.some((s: any) => s.location === selectedLocation && s.day === selectedDayName);
+            if (!hasLocationThisDay) return true;
+            
+            // If it's today, check if all hours are passed
+            if (day.getTime() === today.getTime()) {
+                const todaySlots = schedule.filter((s: any) => s.day === selectedDayName && s.location === selectedLocation);
+                let maxEndHour = 0;
+                todaySlots.forEach((slot: any) => {
+                    const endH = parseInt(slot.endTime.split(':')[0], 10);
+                    if (endH > maxEndHour) maxEndHour = endH;
+                });
+                if (new Date().getHours() >= maxEndHour - 1) return true;
+            }
+        } else if (day.getTime() === today.getTime() && new Date().getHours() >= 23) {
+            return true;
+        }
+
+        return false;
+    };
 
     const [hour, setHour] = useState(validHours[0]?.toString() || "10");
     const [minute, setMinute] = useState("00");
@@ -151,21 +173,18 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
             return;
         }
 
-        setOpen(false); // 1. Close modal instantly!
+        // 1. Close modal instantly!
+        setOpen(false);
         setLoading(true);
-        // Note: loading state is essentially managed by transitions or separate global toasts usually,
-        // but since we want the modal gone, showing the toast from external is better.
-        // We will just let the optimistic update handle the rest, but the modal disappears instantly.
 
-        if (onOptimisticCreate && date && time) {
-            // Very basic optimistic data structure
-            const optimisticDate = new Date(date);
-            const [hours, minutes] = time.split(":").map(Number);
-            optimisticDate.setHours(hours, minutes, 0, 0);
+        const finalDate = new Date(date);
+        const [hours, minutes] = time.split(":").map(Number);
+        finalDate.setHours(hours, minutes, 0, 0);
 
+        if (onOptimisticCreate) {
             onOptimisticCreate({
                 id: `temp-${Date.now()}`,
-                startTime: optimisticDate.toISOString(),
+                startTime: finalDate.toISOString(),
                 status: "PENDING",
                 patient: { fullName: name, phoneNumber: phone }
             });
@@ -174,8 +193,7 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
         const formData = new FormData();
         formData.append("name", name);
         formData.append("phone", phone);
-        formData.append("date", date.toISOString());
-        formData.append("time", time);
+        formData.append("dateTime", finalDate.toISOString()); // Fixing the timezone shift!
         formData.append("doctorId", doctorIdToUse);
         if (selectedLocation) formData.append("location", selectedLocation);
 
@@ -265,13 +283,13 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
                     </div>
                     {locations.length > 0 && (
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="location" className="text-right">
-                                موقع العيادة
+                            <Label htmlFor="location" className="text-right whitespace-nowrap">
+                                موقع العيادة <span className="text-red-500">*</span>
                             </Label>
                             <div className="col-span-3">
                                 <Select value={selectedLocation} onValueChange={setSelectedLocation}>
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="اختر الفرع / الموقع" />
+                                        <SelectValue placeholder="اختر الفرع / الموقع أولاً لتحديد اليوم والوقت" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {locations.map((loc: any) => (
@@ -297,14 +315,27 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
                             required
                         />
                     </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="time" className="text-right">
-                            الوقت
+                    <div className="flex flex-col gap-2 mt-2">
+                        <Label className="text-right font-bold text-slate-700">تاريخ الموعد <span className="text-red-500">*</span></Label>
+                        <div className="flex justify-center bg-slate-50 dark:bg-slate-900 rounded-xl py-2 border border-slate-100 dark:border-slate-800">
+                            <Calendar
+                                mode="single"
+                                selected={date}
+                                onSelect={setDate}
+                                disabled={isDateDisabled}
+                                className="rounded-md"
+                            />
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-4 items-center gap-4 mt-2">
+                        <Label htmlFor="time" className="text-right font-bold text-slate-700">
+                            وقت الموعد <span className="text-red-500">*</span>
                         </Label>
                         <div className="col-span-3">
                             <Select value={hour} onValueChange={setHour}>
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder="ساعة" />
+                                <SelectTrigger className="w-full bg-slate-50 dark:bg-slate-900">
+                                    <SelectValue placeholder="اختر الساعة" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {validHours.map(h => (
@@ -317,16 +348,7 @@ export function NewAppointmentButton({ onOptimisticCreate, allDoctors = [], role
                         </div>
                     </div>
                 </div>
-                <div className="flex justify-center mt-2">
-                    <Calendar
-                        mode="single"
-                        selected={date}
-                        onSelect={setDate}
-                        disabled={isDateDisabled}
-                        className="rounded-md border shadow"
-                    />
-                </div>
-                <DialogFooter className="flex-row-reverse gap-2">
+                <DialogFooter className="flex-row-reverse gap-2 border-t pt-4">
                     <Button type="submit" onClick={handleCreate} disabled={loading || isPending} className="w-full">
                         {loading || isPending ? "جاري الحجز..." : "حفظ الموعد"}
                     </Button>

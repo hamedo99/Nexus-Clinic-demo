@@ -43,6 +43,37 @@ export default async function SuperAdminPage() {
     mostActiveDoctorCount = activeDoctorGroup[0]._count.doctorId;
   }
 
+  // 2. Fetch Doctors
+  const doctorsList = await prisma.doctor.findMany({
+    select: {
+      id: true,
+      name: true,
+      specialty: true,
+      clinicPhone: true,
+      theme_color: true,
+      logo_url: true,
+      isActive: true,
+    },
+    orderBy: { createdAt: "desc" }
+  });
+
+  // 3. Fetch Global Appointments
+  const globalAppointmentsList = await prisma.appointment.findMany({
+    take: 50,
+    orderBy: { startTime: "desc" },
+    select: {
+      id: true,
+      startTime: true,
+      status: true,
+      doctor: { select: { name: true } }
+    }
+  }).then(apps => apps.map(app => ({
+    id: app.id,
+    startTime: app.startTime,
+    status: app.status,
+    doctorName: app.doctor?.name || "طبيب محذوف"
+  })));
+
   return (
     <div className="space-y-8" dir="rtl">
       <div className="flex items-center justify-between pb-6 border-b border-gray-100 dark:border-gray-800">
@@ -69,6 +100,20 @@ export default async function SuperAdminPage() {
               mostActiveDoctorName={mostActiveDoctorName}
               mostActiveDoctorCount={mostActiveDoctorCount}
             />
+          </section>
+
+          <section>
+             <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-slate-200 flex items-center gap-2">
+               🧑‍⚕️ إدارة الأطباء والعيادات
+             </h2>
+             <DoctorManagement doctors={doctorsList} />
+          </section>
+
+          <section>
+             <h2 className="text-xl font-bold mb-6 text-slate-800 dark:text-slate-200 flex items-center gap-2">
+               🗓️ جدول المواعيد العام
+             </h2>
+             <GlobalAppointments appointments={globalAppointmentsList} />
           </section>
         </div>
 

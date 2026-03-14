@@ -35,6 +35,7 @@ export function AppointmentActions({ id, onStatusChange, role, status }: Appoint
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [isRescheduling, setIsRescheduling] = useState(false);
+    const [isCanceling, setIsCanceling] = useState(false);
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [time, setTime] = useState("10:00");
 
@@ -138,14 +139,40 @@ export function AppointmentActions({ id, onStatusChange, role, status }: Appoint
                 </DialogContent>
             </Dialog>
 
-            <button
-                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center text-lg transition-colors cursor-pointer"
-                onClick={() => handleUpdate("CANCELLED")}
-                disabled={loading}
-                title="إلغاء الموعد"
-            >
-                ❌
-            </button>
+            <Dialog open={isCanceling} onOpenChange={setIsCanceling}>
+                <DialogTrigger asChild>
+                    <button
+                        className="w-10 h-10 rounded-full bg-red-50 text-red-500 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 flex items-center justify-center text-lg transition-colors cursor-pointer"
+                        disabled={loading}
+                        title="إلغاء الموعد"
+                    >
+                        ❌
+                    </button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="text-red-500">تأكيد الإلغاء</DialogTitle>
+                        <DialogDescription>
+                            هل أنت متأكد من رغبتك في إلغاء هذا الموعد؟ 
+                            سيتم إخفاؤه مباشرة من الجدول.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="flex gap-2 justify-end mt-4">
+                        <Button variant="outline" onClick={() => setIsCanceling(false)}>تراجع</Button>
+                        <Button 
+                            variant="destructive" 
+                            onClick={() => {
+                                setIsCanceling(false);
+                                handleUpdate("CANCELLED");
+                            }}
+                            disabled={loading}
+                            className="bg-red-500 hover:bg-red-600 focus:ring-red-500"
+                        >
+                            تأكيد الإلغاء
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

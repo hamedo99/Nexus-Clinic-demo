@@ -11,18 +11,15 @@ import { ActionResponse } from "@/lib/types";
 export async function createBooking(prevState: any, formData: FormData): Promise<ActionResponse> {
     const name = formData.get("name") as string;
     const phone = formData.get("phone") as string;
-    const dateStr = formData.get("date") as string;
-    const timeStr = formData.get("time") as string;
+    const dateTimeStr = formData.get("dateTime") as string;
     const doctorId = formData.get("doctorId") as string;
     const location = formData.get("location") as string;
 
-    if (!name || !phone || !dateStr || !doctorId || !timeStr) {
+    if (!name || !phone || !dateTimeStr || !doctorId) {
         return { success: false, error: "Validation error", message: "يرجى ملء جميع الحقول المطلوبة" };
     }
 
-    const startTime = new Date(dateStr);
-    const [hours, minutes] = timeStr.split(":").map(Number);
-    startTime.setHours(hours, minutes, 0, 0);
+    const startTime = new Date(dateTimeStr);
 
     const result = await validateAndCreateBooking({
         patientName: name,
